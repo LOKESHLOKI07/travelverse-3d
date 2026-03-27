@@ -1,0 +1,185 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap");
+
+@font-face {
+  font-family: "Playfair Display";
+  src: url("/assets/fonts/PlayfairDisplay.woff2") format("woff2");
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "GeneralSans";
+  src: url("/assets/fonts/GeneralSans.woff2") format("woff2");
+  font-weight: 200 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Satoshi";
+  src: url("/assets/fonts/Satoshi.woff2") format("woff2");
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --radius: 0.25rem;
+    --background: 0.09 0 0;
+    --foreground: 0.97 0.003 90;
+    --card: 0.12 0 0;
+    --card-foreground: 0.97 0.003 90;
+    --popover: 0.12 0 0;
+    --popover-foreground: 0.97 0.003 90;
+    --primary: 0.85 0.13 192;
+    --primary-foreground: 0.09 0.02 195;
+    --secondary: 0.16 0 0;
+    --secondary-foreground: 0.97 0.003 90;
+    --muted: 0.18 0 0;
+    --muted-foreground: 0.55 0.005 90;
+    --accent: 0.85 0.13 192;
+    --accent-foreground: 0.09 0.02 195;
+    --destructive: 0.577 0.245 27.325;
+    --destructive-foreground: 0.985 0 0;
+    --border: 0.2 0 0;
+    --input: 0.16 0 0;
+    --ring: 0.85 0.13 192;
+    --chart-1: 0.85 0.13 192;
+    --chart-2: 0.75 0.14 55;
+    --chart-3: 0.88 0.13 195;
+    --chart-4: 0.646 0.222 41.116;
+    --chart-5: 0.769 0.188 70.08;
+    --sidebar: 0.12 0 0;
+    --sidebar-foreground: 0.97 0.003 90;
+    --sidebar-primary: 0.85 0.13 192;
+    --sidebar-primary-foreground: 0.09 0.02 195;
+    --sidebar-accent: 0.16 0 0;
+    --sidebar-accent-foreground: 0.97 0.003 90;
+    --sidebar-border: 0.2 0 0;
+    --sidebar-ring: 0.85 0.13 192;
+    --cyan: 0.85 0.13 192;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: #0a0a0a;
+    color: oklch(var(--foreground));
+    font-family: "GeneralSans", "Plus Jakarta Sans", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer utilities {
+  .text-cyan {
+    color: oklch(var(--cyan));
+  }
+
+  .glow-cyan {
+    color: oklch(var(--cyan));
+    text-shadow: 0 0 40px oklch(0.85 0.13 192 / 0.3);
+  }
+
+  .section-number {
+    font-family: "GeneralSans", sans-serif;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    color: oklch(var(--cyan));
+    text-transform: uppercase;
+  }
+
+  .glass-panel {
+    background: oklch(0.11 0 0 / 0.8);
+    backdrop-filter: blur(20px);
+    border: 1px solid oklch(0.22 0 0);
+  }
+
+  .trek-row {
+    border-bottom: 1px solid oklch(var(--border));
+    transition: background 0.2s ease;
+  }
+
+  .trek-row:hover {
+    background: oklch(0.13 0 0);
+  }
+
+  @keyframes scrollBounce {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(8px);
+    }
+  }
+
+  .scroll-bounce {
+    animation: scrollBounce 2s ease-in-out infinite;
+  }
+
+  @keyframes particleDrift {
+    0%,
+    100% {
+      transform: translateY(0) translateX(0);
+      opacity: 0.15;
+    }
+    33% {
+      transform: translateY(-18px) translateX(8px);
+      opacity: 0.3;
+    }
+    66% {
+      transform: translateY(-8px) translateX(-6px);
+      opacity: 0.15;
+    }
+  }
+
+  .nav-link {
+    position: relative;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: oklch(0.65 0.003 90);
+    transition: color 0.2s ease;
+  }
+
+  .nav-link::after {
+    content: "";
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 1px;
+    background: oklch(var(--cyan));
+    transition: width 0.25s ease;
+  }
+
+  .nav-link:hover {
+    color: oklch(0.97 0.003 90);
+  }
+
+  .nav-link:hover::after {
+    width: 100%;
+  }
+
+  .dest-tag {
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: oklch(0.4 0.003 90);
+  }
+}
