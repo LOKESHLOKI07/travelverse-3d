@@ -1,7 +1,22 @@
-import { ArrowDown, ArrowRight, MapPin } from "lucide-react";
-import { motion, useInView } from "motion/react";
+import IndiaMap3D from "@/components/IndiaMap3D";
+import SnowTerrain3D from "@/components/SnowTerrain3D";
+import { Button } from "@/components/ui/button";
+import {
+  Compass,
+  Facebook,
+  Instagram,
+  Mail,
+  MapPin,
+  Mountain,
+  Phone,
+  Shield,
+  Star,
+  Users,
+  Youtube,
+} from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import type { ComponentType } from "react";
 import { useEffect, useRef, useState } from "react";
-import FloatingParticles from "./FloatingParticles";
 
 type Page = "home" | "trek-detail";
 
@@ -10,607 +25,1062 @@ interface HomePageProps {
   openBooking: (dest?: string) => void;
 }
 
-const TREK_ROWS = [
+const TREK_CARDS = [
   {
     id: 1,
-    index: "01",
     name: "Friendship Peak",
-    region: "Kullu, Himachal Pradesh",
+    image:
+      "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&fit=crop",
     altitude: "5,289m",
     duration: "8 Days",
-    difficulty: "Moderate–Hard",
-    price: "\u20B928,500",
+    difficulty: "Moderate-Hard",
+    difficultyColor: "orange",
+    slug: "friendship-peak",
+    price: "₹28,500",
   },
   {
     id: 2,
-    index: "02",
     name: "Hampta Pass",
-    region: "Lahaul, Himachal Pradesh",
+    image:
+      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&fit=crop",
     altitude: "4,270m",
     duration: "5 Days",
     difficulty: "Moderate",
-    price: "\u20B918,500",
+    difficultyColor: "cyan",
+    slug: "hampta-pass",
+    price: "₹18,500",
   },
   {
     id: 3,
-    index: "03",
     name: "Kedarkantha",
-    region: "Uttarkashi, Uttarakhand",
+    image:
+      "https://images.unsplash.com/photo-1551632811-561732d1e306?w=600&fit=crop",
     altitude: "3,800m",
     duration: "6 Days",
-    difficulty: "Easy–Moderate",
-    price: "\u20B914,500",
+    difficulty: "Easy-Moderate",
+    difficultyColor: "green",
+    slug: "kedarkantha",
+    price: "₹14,500",
   },
 ];
 
-const DESTINATIONS = [
-  { name: "Leh / Ladakh", state: "Ladakh UT" },
-  { name: "Spiti Valley", state: "Himachal Pradesh" },
-  { name: "Kasol & Kheerganga", state: "Himachal Pradesh" },
-  { name: "Kedarnath", state: "Uttarakhand" },
-  { name: "Badrinath", state: "Uttarakhand" },
-  { name: "Roopkund", state: "Uttarakhand" },
-  { name: "Valley of Flowers", state: "Uttarakhand" },
-  { name: "Hampta Pass", state: "Himachal Pradesh" },
-  { name: "Chadar Trek", state: "Ladakh UT" },
-  { name: "Sandakphu", state: "West Bengal" },
-  { name: "Goechala", state: "Sikkim" },
-  { name: "Beas Kund", state: "Himachal Pradesh" },
+const JOURNEY_WAYPOINTS = [
+  {
+    day: "Day 1",
+    label: "Manali Basecamp",
+    elevation: "Start",
+    x: 80,
+    y: 200,
+    isSummit: false,
+  },
+  {
+    day: "Day 3",
+    label: "Lower Camp",
+    elevation: "2,800m",
+    x: 220,
+    y: 150,
+    isSummit: false,
+  },
+  {
+    day: "Day 5",
+    label: "High Camp",
+    elevation: "4,200m",
+    x: 360,
+    y: 100,
+    isSummit: false,
+  },
+  {
+    day: "Day 7",
+    label: "Summit Push",
+    elevation: "5,000m",
+    x: 500,
+    y: 60,
+    isSummit: false,
+  },
+  {
+    day: "Day 8",
+    label: "Friendship Peak ★",
+    elevation: "5,289m",
+    x: 620,
+    y: 30,
+    isSummit: true,
+  },
+];
+
+const EXPERIENCES = [
+  {
+    label: "Wake Up Above the Clouds",
+    image: "/assets/generated/experience-above-clouds.dim_800x500.jpg",
+    text: "Every morning at base camp is a revelation. You open your tent to a world wrapped in silence, mist below your feet, and the summit calling from above.",
+  },
+  {
+    label: "Train on Snow and Ice",
+    image: "/assets/generated/experience-snow-training.dim_800x500.jpg",
+    text: "Our guides prepare you for every slope. Learn ice axe arrest, crampon technique, and high-altitude endurance in the most dramatic classroom on Earth.",
+  },
+  {
+    label: "Summit at Sunrise",
+    image: "/assets/generated/experience-summit-sunrise.dim_800x500.jpg",
+    text: "The summit is yours. As the sun breaks over the horizon, you stand at 5,289m — above the clouds, above doubt. This is why you came.",
+  },
+];
+
+const WHY_FEATURES = [
+  {
+    icon: Compass,
+    title: "Certified Mountain Guides",
+    desc: "UIAA-certified, 10+ years Himalayan experience",
+  },
+  {
+    icon: Shield,
+    title: "Safety First",
+    desc: "Satellite communication, medical kits, evacuation protocol",
+  },
+  {
+    icon: Mountain,
+    title: "Premium Gear",
+    desc: "High-altitude tents, sleeping bags, technical equipment provided",
+  },
+  {
+    icon: Users,
+    title: "Small Groups",
+    desc: "Max 8 trekkers per batch — personal, intimate, safe",
+  },
 ];
 
 const TESTIMONIALS = [
   {
     name: "Priya Sharma",
     location: "Mumbai",
+    initials: "PS",
+    color: "oklch(0.6 0.18 320)",
     quote:
-      "Friendship Peak was a life-changing experience. The guides were exceptional and safety was top priority throughout.",
+      "Friendship Peak was a life-changing experience. The guides were exceptional and safety was top priority.",
   },
   {
     name: "Arjun Mehta",
     location: "Delhi",
+    initials: "AM",
+    color: "oklch(0.6 0.15 260)",
     quote:
-      "Hampta Pass in 5 days felt like 5 lifetimes of memories. Mountain Explorers made it completely effortless.",
+      "Hampta Pass in 5 days felt like 5 lifetimes of memories. Mountain Explorers made it effortless.",
   },
   {
     name: "Kavya Reddy",
     location: "Bangalore",
+    initials: "KR",
+    color: "oklch(0.6 0.18 145)",
     quote:
-      "The pre-trek preparation sessions and the summit push \u2014 I've never felt more alive in my life.",
+      "The pre-trek preparation sessions and the summit push — I've never felt more alive.",
   },
 ];
 
-function RevealSection({
-  children,
-  delay = 0,
-}: { children: React.ReactNode; delay?: number }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-80px" });
-  return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 32 }}
-      animate={isInView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.7, delay, ease: [0.25, 0.1, 0.25, 1] }}
-    >
-      {children}
-    </motion.div>
-  );
-}
+const FOOTER_LINKS = {
+  Treks: ["Friendship Peak", "Hampta Pass", "Kedarkantha", "All Treks"],
+  Company: ["About", "Blog", "Careers", "Press"],
+  Support: ["FAQ", "Safety Policy", "Cancellation"],
+  Contact: [
+    "hello@mountainexplorers.in",
+    "+91 98765 43210",
+    "Manali, Himachal Pradesh",
+  ],
+};
+
+const SOCIAL_LINKS: {
+  icon: ComponentType<{ className?: string }>;
+  href: string;
+  label: string;
+}[] = [
+  { icon: Instagram, href: "https://instagram.com", label: "Instagram" },
+  { icon: Facebook, href: "https://facebook.com", label: "Facebook" },
+  { icon: Youtube, href: "https://youtube.com", label: "YouTube" },
+];
 
 export default function HomePage({ setPage, openBooking }: HomePageProps) {
   const [scrollY, setScrollY] = useState(0);
+  const [showFloatingCTA, setShowFloatingCTA] = useState(false);
+  const journeyRef = useRef<HTMLDivElement>(null);
+  const [journeyVisible, setJourneyVisible] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrollY(window.scrollY);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
+      setShowFloatingCTA(window.scrollY > 200);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const scrollTo = (id: string) =>
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) setJourneyVisible(true);
+      },
+      { threshold: 0.3 },
+    );
+    if (journeyRef.current) observer.observe(journeyRef.current);
+    return () => observer.disconnect();
+  }, []);
 
-  const navScrolled = scrollY > 60;
+  const scrollToSection = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+  };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-foreground overflow-x-hidden">
-      {/* NAV */}
+    <div className="min-h-screen overflow-x-hidden">
+      {/* NAVBAR */}
       <header
-        data-ocid="nav.panel"
-        className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
+        className="fixed top-0 left-0 right-0 z-50"
         style={{
-          background: navScrolled ? "rgba(10,10,10,0.93)" : "transparent",
-          backdropFilter: navScrolled ? "blur(20px)" : "none",
-          borderBottom: navScrolled ? "1px solid oklch(0.2 0 0)" : "none",
+          background:
+            scrollY > 50
+              ? "oklch(0.11 0.025 232 / 0.95)"
+              : "oklch(0.09 0.018 232 / 0.3)",
+          backdropFilter: "blur(20px)",
+          borderBottom:
+            scrollY > 50
+              ? "1px solid oklch(0.31 0.03 230 / 0.3)"
+              : "1px solid transparent",
+          transition: "all 0.3s ease",
         }}
       >
-        <div className="max-w-7xl mx-auto px-6 lg:px-10 h-14 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <button
             type="button"
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
             className="flex items-center gap-2.5"
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
           >
             <img
               src="/assets/generated/mountain-explorers-logo-transparent.dim_300x300.png"
               alt="Mountain Explorers"
-              className="w-7 h-7 rounded-full object-cover"
+              className="w-10 h-10 rounded-full object-cover"
             />
-            <span className="font-sans text-[11px] font-semibold tracking-[0.14em] uppercase text-foreground">
-              Mountain Explorers
+            <span className="font-display font-bold text-lg tracking-tight text-foreground">
+              MOUNTAIN <span className="text-cyan">EXPLORERS</span>
             </span>
           </button>
 
-          <nav
-            className="hidden md:flex items-center gap-8"
-            aria-label="Primary"
-          >
+          <nav className="hidden lg:flex items-center gap-6">
             {(
               [
+                ["Home", ""],
                 ["Treks", "treks"],
-                ["Destinations", "destinations"],
+                ["Journey", "journey"],
+                ["Experience", "experience"],
                 ["About", "about"],
-                ["Contact", "contact"],
+                ["Book", "book"],
               ] as [string, string][]
             ).map(([label, id]) => (
               <button
                 key={label}
                 type="button"
-                data-ocid={`nav.${label.toLowerCase()}.link`}
-                className="nav-link"
-                onClick={() => scrollTo(id)}
+                data-ocid="nav.link"
+                onClick={() =>
+                  id
+                    ? scrollToSection(id)
+                    : window.scrollTo({ top: 0, behavior: "smooth" })
+                }
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
                 {label}
               </button>
             ))}
-            <button
-              type="button"
-              data-ocid="nav.book.button"
-              onClick={() => openBooking()}
-              className="text-[11px] tracking-[0.12em] uppercase px-4 py-1.5 border border-foreground/20 text-foreground/60 hover:border-foreground/50 hover:text-foreground transition-all duration-200"
-            >
-              Book Now
-            </button>
           </nav>
+
+          <Button
+            data-ocid="nav.primary_button"
+            onClick={() => openBooking("Friendship Peak")}
+            className="pill-btn hidden sm:flex"
+            style={{
+              background: "oklch(0.85 0.13 192)",
+              color: "oklch(0.13 0.04 195)",
+              fontWeight: 700,
+            }}
+          >
+            Book Now
+          </Button>
         </div>
       </header>
 
-      {/* HERO */}
-      <section className="relative min-h-screen flex flex-col justify-end pb-24 overflow-hidden">
-        <div className="absolute inset-0">
-          <img
-            src="/assets/generated/hero-mountains.dim_1920x1080.jpg"
-            alt=""
-            className="w-full h-full object-cover"
-          />
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                "linear-gradient(to bottom, rgba(10,10,10,0.4) 0%, rgba(10,10,10,0.65) 55%, #0a0a0a 100%)",
-            }}
-          />
-          <FloatingParticles count={10} />
-        </div>
+      {/* HERO — 3D Snow Terrain */}
+      <SnowTerrain3D
+        openBooking={openBooking}
+        scrollToSection={scrollToSection}
+      />
 
-        <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-10 w-full">
+      {/* FEATURED TREKS */}
+      <section id="treks" className="py-24">
+        <div className="max-w-7xl mx-auto px-6">
           <motion.div
-            initial={{ opacity: 0, y: 48 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, ease: [0.25, 0.1, 0.25, 1] }}
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-14"
           >
-            <p className="section-number mb-6">
-              Est. 2018 \u2014 Himalayan Expeditions
+            <p className="text-cyan text-xs font-bold tracking-[0.3em] uppercase mb-3">
+              FEATURED EXPEDITIONS
             </p>
-            <h1
-              className="font-display leading-none tracking-tight"
-              style={{ fontSize: "clamp(64px, 11vw, 168px)", color: "#f5f5f0" }}
+            <h2
+              className="font-display font-extrabold text-foreground"
+              style={{ fontSize: "clamp(32px, 4vw, 54px)" }}
             >
-              Mountain
-            </h1>
-            <h1
-              className="font-display leading-none tracking-tight"
-              style={{
-                fontSize: "clamp(64px, 11vw, 168px)",
-                color: "transparent",
-                WebkitTextStroke: "1px rgba(245,245,240,0.38)",
-              }}
-            >
-              Explorers
-            </h1>
-            <div className="mt-10 flex flex-col sm:flex-row gap-4">
-              <button
-                type="button"
-                data-ocid="hero.primary_button"
-                onClick={() => scrollTo("treks")}
-                className="inline-flex items-center gap-2 text-[11px] tracking-[0.12em] uppercase px-6 py-3.5 bg-foreground text-background font-semibold hover:bg-foreground/90 transition-colors"
-              >
-                View Expeditions <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                data-ocid="hero.secondary_button"
-                onClick={() => openBooking()}
-                className="inline-flex items-center gap-2 text-[11px] tracking-[0.12em] uppercase px-6 py-3.5 border border-foreground/25 text-foreground/65 hover:border-foreground/50 hover:text-foreground transition-all"
-              >
-                Book an Expedition
-              </button>
-            </div>
+              Choose Your Peak
+            </h2>
           </motion.div>
-        </div>
 
-        <motion.div
-          className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-foreground/35"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.4, duration: 0.8 }}
-        >
-          <span className="text-[10px] tracking-[0.22em] uppercase">
-            Scroll to discover
-          </span>
-          <ArrowDown className="w-3.5 h-3.5 scroll-bounce" />
-        </motion.div>
-      </section>
-
-      {/* 01 — TREKS */}
-      <section id="treks" className="max-w-7xl mx-auto px-6 lg:px-10 py-28">
-        <RevealSection>
-          <div className="flex items-start gap-6 mb-16">
-            <span className="section-number mt-1.5">01</span>
-            <div>
-              <h2
-                className="font-display leading-tight"
-                style={{ fontSize: "clamp(32px, 5vw, 68px)" }}
-              >
-                Signature
-                <br />
-                <span className="glow-cyan">Expeditions</span>
-              </h2>
-            </div>
-          </div>
-        </RevealSection>
-
-        <div className="border-t border-border" data-ocid="treks.list">
-          {TREK_ROWS.map((trek, i) => (
-            <RevealSection key={trek.id} delay={i * 0.1}>
-              <button
-                type="button"
+          <div
+            data-ocid="treks.list"
+            className="grid grid-cols-1 md:grid-cols-3 gap-6"
+          >
+            {TREK_CARDS.map((trek, i) => (
+              <motion.div
+                key={trek.id}
                 data-ocid={`treks.item.${i + 1}`}
-                className="trek-row w-full text-left px-0 py-8 group flex items-center justify-between gap-6"
-                onClick={() => setPage("trek-detail")}
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: i * 0.12 }}
+                onClick={() =>
+                  trek.slug === "friendship-peak" && setPage("trek-detail")
+                }
+                className="trek-card-hover rounded-2xl overflow-hidden cursor-pointer relative group"
+                style={{
+                  background: "oklch(0.16 0.025 232)",
+                  border: "1px solid oklch(0.31 0.03 230 / 0.5)",
+                }}
               >
-                <div className="flex items-baseline gap-6 min-w-0">
-                  <span
-                    className="font-display shrink-0 select-none"
+                <div className="relative h-56 overflow-hidden">
+                  <img
+                    src={trek.image}
+                    alt={trek.name}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    loading="lazy"
+                  />
+                  <div
+                    className="absolute inset-0"
                     style={{
-                      fontSize: "clamp(24px, 3.5vw, 48px)",
-                      color: "oklch(0.2 0 0)",
+                      background:
+                        "linear-gradient(to top, oklch(0.16 0.025 232) 0%, transparent 50%)",
                     }}
-                  >
-                    {trek.index}
-                  </span>
-                  <div className="min-w-0">
-                    <h3
-                      className="font-display font-bold leading-tight group-hover:text-cyan transition-colors duration-200"
-                      style={{ fontSize: "clamp(18px, 2.2vw, 30px)" }}
+                  />
+                  <div className="absolute top-3 left-3">
+                    <span
+                      className="text-xs font-bold px-3 py-1 rounded-full"
+                      style={{
+                        background: "oklch(0.85 0.13 192 / 0.2)",
+                        color: "oklch(0.85 0.13 192)",
+                        border: "1px solid oklch(0.85 0.13 192 / 0.4)",
+                      }}
                     >
+                      {trek.altitude}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-5 space-y-4">
+                  <div className="flex items-start justify-between">
+                    <h3 className="font-display font-bold text-xl text-foreground">
                       {trek.name}
                     </h3>
-                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      {trek.region}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="hidden lg:flex items-center gap-10 shrink-0">
-                  <div className="text-right">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
-                      Altitude
-                    </p>
-                    <p className="text-sm font-semibold mt-0.5">
-                      {trek.altitude}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
-                      Duration
-                    </p>
-                    <p className="text-sm font-semibold mt-0.5">
-                      {trek.duration}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
-                      Difficulty
-                    </p>
-                    <p className="text-sm font-semibold mt-0.5">
+                    <span
+                      className="text-xs font-bold px-2.5 py-1 rounded-full"
+                      style={{
+                        background:
+                          trek.difficultyColor === "orange"
+                            ? "oklch(0.75 0.14 55 / 0.15)"
+                            : trek.difficultyColor === "cyan"
+                              ? "oklch(0.85 0.13 192 / 0.15)"
+                              : "oklch(0.65 0.15 145 / 0.15)",
+                        color:
+                          trek.difficultyColor === "orange"
+                            ? "oklch(0.75 0.14 55)"
+                            : trek.difficultyColor === "cyan"
+                              ? "oklch(0.85 0.13 192)"
+                              : "oklch(0.65 0.15 145)",
+                        border:
+                          trek.difficultyColor === "orange"
+                            ? "1px solid oklch(0.75 0.14 55 / 0.3)"
+                            : trek.difficultyColor === "cyan"
+                              ? "1px solid oklch(0.85 0.13 192 / 0.3)"
+                              : "1px solid oklch(0.65 0.15 145 / 0.3)",
+                      }}
+                    >
                       {trek.difficulty}
-                    </p>
+                    </span>
                   </div>
-                  <div className="text-right">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
-                      From
-                    </p>
-                    <p className="text-sm font-bold mt-0.5 text-cyan">
-                      {trek.price}
-                    </p>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all" />
-                </div>
 
-                <div className="lg:hidden shrink-0 text-right">
-                  <p className="font-bold text-cyan text-sm">{trek.price}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {trek.duration}
-                  </p>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Mountain className="w-4 h-4 text-cyan" />
+                      {trek.altitude}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="text-cyan">⏱</span>
+                      {trek.duration}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="font-display font-bold text-lg text-cyan">
+                      {trek.price}
+                    </span>
+                    <Button
+                      data-ocid={`treks.button.${i + 1}`}
+                      size="sm"
+                      className="rounded-full text-xs font-bold tracking-wider"
+                      style={{
+                        background: "oklch(0.85 0.13 192 / 0.15)",
+                        border: "1px solid oklch(0.85 0.13 192 / 0.4)",
+                        color: "oklch(0.85 0.13 192)",
+                      }}
+                    >
+                      View Trek
+                    </Button>
+                  </div>
                 </div>
-              </button>
-            </RevealSection>
-          ))}
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* 02 — ABOUT */}
-      <section id="about" className="py-28 border-t border-border">
-        <div className="max-w-7xl mx-auto px-6 lg:px-10">
-          <RevealSection>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
-              <div>
-                <div className="flex items-start gap-6 mb-10">
-                  <span className="section-number mt-1.5">02</span>
-                  <h2
-                    className="font-display leading-tight"
-                    style={{ fontSize: "clamp(28px, 4vw, 58px)" }}
+      {/* INTERACTIVE TREK JOURNEY */}
+      <section id="journey" className="py-24" ref={journeyRef}>
+        <div className="max-w-7xl mx-auto px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-14"
+          >
+            <p className="text-cyan text-xs font-bold tracking-[0.3em] uppercase mb-3">
+              ROUTE MAP
+            </p>
+            <h2
+              className="font-display font-extrabold text-foreground"
+              style={{ fontSize: "clamp(32px, 4vw, 54px)" }}
+            >
+              The Journey
+            </h2>
+            <p className="text-muted-foreground mt-3">
+              From basecamp to summit — every step mapped.
+            </p>
+          </motion.div>
+
+          <div
+            className="glass-card rounded-2xl p-8 overflow-x-auto"
+            style={{
+              boxShadow: "0 0 60px oklch(0.85 0.13 192 / 0.06)",
+            }}
+          >
+            <svg
+              role="img"
+              aria-label="Trek route from Manali to Friendship Peak summit"
+              viewBox="0 0 720 260"
+              className="w-full"
+              style={{ minWidth: "480px" }}
+            >
+              <defs>
+                <linearGradient id="pathGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop
+                    offset="0%"
+                    stopColor="oklch(0.85 0.13 192)"
+                    stopOpacity="0.15"
+                  />
+                  <stop
+                    offset="100%"
+                    stopColor="oklch(0.85 0.13 192)"
+                    stopOpacity="0"
+                  />
+                </linearGradient>
+              </defs>
+
+              <path
+                d="M 80 200 Q 150 175 220 150 Q 290 125 360 100 Q 430 75 500 60 Q 560 45 620 30 L 620 240 L 80 240 Z"
+                fill="url(#pathGrad)"
+              />
+
+              <path
+                d="M 80 200 Q 150 175 220 150 Q 290 125 360 100 Q 430 75 500 60 Q 560 45 620 30"
+                fill="none"
+                stroke="oklch(0.85 0.13 192)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                className={journeyVisible ? "animate-path" : ""}
+                style={{ strokeDasharray: 1000, strokeDashoffset: 1000 }}
+              />
+
+              <line
+                x1="60"
+                y1="240"
+                x2="660"
+                y2="240"
+                stroke="oklch(0.31 0.03 230 / 0.4)"
+                strokeWidth="1"
+              />
+
+              {JOURNEY_WAYPOINTS.map((pt) => (
+                <g key={pt.day}>
+                  <circle
+                    cx={pt.x}
+                    cy={pt.y}
+                    r="14"
+                    fill={
+                      pt.isSummit
+                        ? "oklch(0.75 0.14 55 / 0.15)"
+                        : "oklch(0.85 0.13 192 / 0.1)"
+                    }
+                    stroke="none"
+                  />
+                  <circle
+                    cx={pt.x}
+                    cy={pt.y}
+                    r="8"
+                    fill={
+                      pt.isSummit
+                        ? "oklch(0.75 0.14 55)"
+                        : "oklch(0.16 0.025 232)"
+                    }
+                    stroke={
+                      pt.isSummit
+                        ? "oklch(0.75 0.14 55)"
+                        : "oklch(0.85 0.13 192)"
+                    }
+                    strokeWidth="2"
+                  />
+                  <text
+                    x={pt.x}
+                    y={pt.y + 30}
+                    textAnchor="middle"
+                    fill="oklch(0.85 0.13 192)"
+                    fontSize="10"
+                    fontWeight="700"
+                    fontFamily="Bricolage Grotesque, sans-serif"
                   >
-                    We guide you
-                    <br />
-                    <span className="glow-cyan">to the summit.</span>
-                  </h2>
-                </div>
-                <p className="text-muted-foreground leading-relaxed text-sm max-w-md">
-                  Mountain Explorers is India's premier high-altitude trekking
-                  company. Founded by UIAA-certified mountaineers, we've guided
-                  over 2,000 trekkers through the Himalayas \u2014 safely,
-                  responsibly, and with deep reverence for the mountains.
-                </p>
-                <div className="mt-10 grid grid-cols-3 gap-6">
-                  {[
-                    { stat: "2,000+", label: "Trekkers guided" },
-                    { stat: "98%", label: "Summit success" },
-                    { stat: "0", label: "Safety incidents" },
-                  ].map(({ stat, label }) => (
-                    <div key={label}>
-                      <p className="font-display text-3xl font-bold glow-cyan">
-                        {stat}
+                    {pt.day}
+                  </text>
+                  <text
+                    x={pt.x}
+                    y={pt.y + 44}
+                    textAnchor="middle"
+                    fill="oklch(0.75 0.03 220)"
+                    fontSize="9"
+                    fontFamily="Plus Jakarta Sans, sans-serif"
+                  >
+                    {pt.label}
+                  </text>
+                  <text
+                    x={pt.x}
+                    y={pt.y - 18}
+                    textAnchor="middle"
+                    fill={
+                      pt.isSummit
+                        ? "oklch(0.75 0.14 55)"
+                        : "oklch(0.75 0.03 220)"
+                    }
+                    fontSize="9"
+                    fontFamily="Plus Jakarta Sans, sans-serif"
+                  >
+                    {pt.elevation}
+                  </text>
+                </g>
+              ))}
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      {/* EXPERIENCE SECTION */}
+      <section id="experience" className="py-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
+            <p className="text-cyan text-xs font-bold tracking-[0.3em] uppercase mb-3">
+              STORIES
+            </p>
+            <h2
+              className="font-display font-extrabold text-foreground"
+              style={{ fontSize: "clamp(32px, 4vw, 54px)" }}
+            >
+              The Experience
+            </h2>
+          </motion.div>
+
+          <div className="space-y-20">
+            {EXPERIENCES.map((exp, i) => (
+              <motion.div
+                key={exp.label}
+                initial={{ opacity: 0, y: 50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-80px" }}
+                transition={{ duration: 0.7 }}
+                className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center"
+              >
+                {i % 2 === 1 ? (
+                  <>
+                    <div className="space-y-5 order-2 lg:order-2">
+                      <p className="text-cyan text-xs font-bold tracking-[0.3em] uppercase">
+                        0{i + 1}
                       </p>
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">
-                        {label}
+                      <h3
+                        className="font-display font-extrabold text-foreground italic"
+                        style={{ fontSize: "clamp(24px, 3vw, 40px)" }}
+                      >
+                        {exp.label}
+                      </h3>
+                      <p className="text-muted-foreground leading-relaxed text-lg">
+                        {exp.text}
                       </p>
                     </div>
+                    <div className="rounded-2xl overflow-hidden order-1 lg:order-1">
+                      <img
+                        src={exp.image}
+                        alt={exp.label}
+                        className="w-full h-72 lg:h-96 object-cover"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="space-y-5">
+                      <p className="text-cyan text-xs font-bold tracking-[0.3em] uppercase">
+                        0{i + 1}
+                      </p>
+                      <h3
+                        className="font-display font-extrabold text-foreground italic"
+                        style={{ fontSize: "clamp(24px, 3vw, 40px)" }}
+                      >
+                        {exp.label}
+                      </h3>
+                      <p className="text-muted-foreground leading-relaxed text-lg">
+                        {exp.text}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl overflow-hidden">
+                      <img
+                        src={exp.image}
+                        alt={exp.label}
+                        className="w-full h-72 lg:h-96 object-cover"
+                      />
+                    </div>
+                  </>
+                )}
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* WHY CHOOSE US */}
+      <section id="about" className="py-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-14"
+          >
+            <p className="text-cyan text-xs font-bold tracking-[0.3em] uppercase mb-3">
+              OUR EDGE
+            </p>
+            <h2
+              className="font-display font-extrabold text-foreground"
+              style={{ fontSize: "clamp(32px, 4vw, 54px)" }}
+            >
+              Why Choose Us
+            </h2>
+          </motion.div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {WHY_FEATURES.map((feat, i) => (
+              <motion.div
+                key={feat.title}
+                data-ocid="features.card"
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+                className="glass-card rounded-2xl p-6 group"
+                style={{
+                  transition: "border-color 0.3s ease, box-shadow 0.3s ease",
+                }}
+              >
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-all group-hover:scale-110"
+                  style={{
+                    background: "oklch(0.85 0.13 192 / 0.1)",
+                    border: "1px solid oklch(0.85 0.13 192 / 0.3)",
+                  }}
+                >
+                  <feat.icon className="w-5 h-5 text-cyan" />
+                </div>
+                <h4 className="font-display font-bold text-foreground mb-2">
+                  {feat.title}
+                </h4>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {feat.desc}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* TESTIMONIALS */}
+      <section className="py-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-14"
+          >
+            <p className="text-cyan text-xs font-bold tracking-[0.3em] uppercase mb-3">
+              REVIEWS
+            </p>
+            <h2
+              className="font-display font-extrabold text-foreground"
+              style={{ fontSize: "clamp(32px, 4vw, 54px)" }}
+            >
+              What Trekkers Say
+            </h2>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {TESTIMONIALS.map((t, i) => (
+              <motion.div
+                key={t.name}
+                data-ocid={`testimonials.item.${i + 1}`}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+                className="glass-card rounded-2xl p-6 space-y-4"
+              >
+                <div className="flex items-center gap-1">
+                  {[...Array(5)].map((_, j) => (
+                    <Star
+                      key={`star-${t.name}-${j}`}
+                      className="w-4 h-4"
+                      style={{
+                        color: "oklch(0.82 0.17 85)",
+                        fill: "oklch(0.82 0.17 85)",
+                      }}
+                    />
+                  ))}
+                </div>
+                <p className="text-foreground leading-relaxed italic">
+                  &ldquo;{t.quote}&rdquo;
+                </p>
+                <div className="flex items-center gap-3 pt-2">
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm text-white"
+                    style={{ background: t.color }}
+                  >
+                    {t.initials}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground text-sm">
+                      {t.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t.location}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* EXPLORE INDIA MAP */}
+      <section id="map" className="py-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <p className="text-cyan text-xs font-bold tracking-[0.3em] uppercase mb-3">
+              OUR DESTINATIONS
+            </p>
+            <h2
+              className="font-display font-extrabold text-foreground"
+              style={{ fontSize: "clamp(32px, 4vw, 54px)" }}
+            >
+              Explore India in 3D
+            </h2>
+            <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
+              Click any glowing pin to discover our trek destinations across
+              India. Drag to rotate, scroll to zoom.
+            </p>
+          </div>
+          <div
+            className="rounded-3xl overflow-hidden"
+            style={{
+              height: "550px",
+              border: "1px solid oklch(0.85 0.13 192 / 0.15)",
+              background: "oklch(0.08 0.02 232)",
+            }}
+          >
+            <IndiaMap3D />
+          </div>
+        </div>
+      </section>
+
+      {/* BOOKING PREVIEW */}
+      <section id="book" className="py-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-14"
+          >
+            <p className="text-cyan text-xs font-bold tracking-[0.3em] uppercase mb-3">
+              GET STARTED
+            </p>
+            <h2
+              className="font-display font-extrabold text-foreground"
+              style={{ fontSize: "clamp(32px, 4vw, 54px)" }}
+            >
+              Ready to Summit?
+            </h2>
+          </motion.div>
+
+          <div className="relative flex justify-center">
+            <div className="absolute -top-16 right-1/4 w-48 h-48 opacity-20 animate-float hidden lg:block pointer-events-none">
+              <img
+                src="/assets/generated/mountain-isometric-3d-transparent.dim_800x600.png"
+                alt=""
+                aria-hidden="true"
+                className="w-full h-full object-contain"
+              />
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="glass-card rounded-3xl p-8 max-w-md w-full"
+              style={{
+                boxShadow:
+                  "0 0 60px oklch(0.85 0.13 192 / 0.12), 0 0 0 1px oklch(0.85 0.13 192 / 0.2)",
+              }}
+            >
+              <div className="text-center mb-6">
+                <h3 className="font-display font-extrabold text-2xl text-foreground mb-1">
+                  Friendship Peak Expedition
+                </h3>
+                <div
+                  className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs"
+                  style={{
+                    background: "oklch(0.75 0.14 55 / 0.15)",
+                    color: "oklch(0.75 0.14 55)",
+                    border: "1px solid oklch(0.75 0.14 55 / 0.3)",
+                  }}
+                >
+                  8 Days / 7 Nights
+                </div>
+                <div className="mt-4">
+                  <span className="font-display font-extrabold text-4xl text-cyan">
+                    ₹28,500
+                  </span>
+                  <span className="text-muted-foreground text-sm">
+                    {" "}
+                    / person
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-2 mb-6">
+                {[
+                  "Accommodation (tents + guesthouses)",
+                  "All meals (breakfast, lunch, dinner)",
+                  "Expert mountain guides",
+                  "Trekking permits & forest fees",
+                  "Safety equipment & first aid",
+                  "Airport transfers",
+                ].map((item) => (
+                  <div key={item} className="flex items-center gap-2.5 text-sm">
+                    <span className="text-cyan font-bold">✓</span>
+                    <span className="text-foreground">{item}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mb-4">
+                <p className="text-xs text-muted-foreground mb-2">
+                  Not included:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {["Personal gear", "Travel insurance", "Tips"].map((item) => (
+                    <span
+                      key={item}
+                      className="text-xs text-muted-foreground px-2 py-0.5 rounded"
+                      style={{
+                        background: "oklch(0.22 0.025 230)",
+                      }}
+                    >
+                      {item}
+                    </span>
                   ))}
                 </div>
               </div>
 
-              <div className="relative">
-                <img
-                  src="/assets/generated/experience-summit-sunrise.dim_800x500.jpg"
-                  alt="Summit at sunrise in the Himalayas"
-                  className="w-full aspect-[4/3] object-cover"
-                  style={{ filter: "brightness(0.85)" }}
-                />
-                <div className="absolute bottom-5 left-5 right-5 glass-panel p-4">
-                  <p className="section-number mb-1">Summit experience</p>
-                  <p className="text-xs text-foreground/70 leading-snug">
-                    Standing at 5,289m, above the clouds, above doubt \u2014
-                    this is why you came.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </RevealSection>
-        </div>
-      </section>
-
-      {/* 03 — DESTINATIONS */}
-      <section id="destinations" className="py-28 border-t border-border">
-        <div className="max-w-7xl mx-auto px-6 lg:px-10">
-          <RevealSection>
-            <div className="flex items-start gap-6 mb-16">
-              <span className="section-number mt-1.5">03</span>
-              <div>
-                <h2
-                  className="font-display leading-tight"
-                  style={{ fontSize: "clamp(28px, 4vw, 58px)" }}
-                >
-                  India's finest
-                  <br />
-                  <span className="glow-cyan">destinations</span>
-                </h2>
-                <p className="text-muted-foreground text-xs mt-3 uppercase tracking-widest">
-                  {DESTINATIONS.length} destinations across the Indian Himalayas
-                </p>
-              </div>
-            </div>
-          </RevealSection>
-
-          <div
-            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-0 border-t border-l border-border"
-            data-ocid="destinations.list"
-          >
-            {DESTINATIONS.map((dest, i) => (
-              <RevealSection key={dest.name} delay={i * 0.04}>
-                <div
-                  data-ocid={`destinations.item.${i + 1}`}
-                  className="border-r border-b border-border p-6 hover:bg-[#111] transition-colors group cursor-default"
-                >
-                  <p className="font-medium text-sm text-foreground group-hover:text-cyan transition-colors leading-snug">
-                    {dest.name}
-                  </p>
-                  <p className="dest-tag mt-1">{dest.state}</p>
-                </div>
-              </RevealSection>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 04 — TESTIMONIALS */}
-      <section className="py-28 border-t border-border">
-        <div className="max-w-7xl mx-auto px-6 lg:px-10">
-          <RevealSection>
-            <div className="flex items-start gap-6 mb-16">
-              <span className="section-number mt-1.5">04</span>
-              <h2
-                className="font-display leading-tight"
-                style={{ fontSize: "clamp(28px, 4vw, 58px)" }}
+              <Button
+                data-ocid="booking.primary_button"
+                onClick={() => openBooking("Friendship Peak")}
+                className="w-full pill-btn font-bold tracking-wider text-base py-3"
+                style={{
+                  background: "oklch(0.85 0.13 192)",
+                  color: "oklch(0.13 0.04 195)",
+                  boxShadow: "0 0 30px oklch(0.85 0.13 192 / 0.35)",
+                }}
               >
-                What our
-                <br />
-                <span className="glow-cyan">trekkers say</span>
-              </h2>
-            </div>
-          </RevealSection>
+                Book Your Trek
+              </Button>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-0 border-t border-l border-border">
-            {TESTIMONIALS.map((t, i) => (
-              <RevealSection key={t.name} delay={i * 0.12}>
-                <div
-                  data-ocid={`testimonials.item.${i + 1}`}
-                  className="border-r border-b border-border p-8 flex flex-col gap-6"
-                >
-                  <p className="text-foreground/70 leading-relaxed text-sm">
-                    &ldquo;{t.quote}&rdquo;
-                  </p>
-                  <div className="mt-auto">
-                    <p className="text-sm font-semibold">{t.name}</p>
-                    <p className="dest-tag mt-0.5">{t.location}</p>
-                  </div>
-                </div>
-              </RevealSection>
-            ))}
+              <p className="text-center text-xs text-muted-foreground mt-3">
+                Limited to 8 trekkers per batch • Next departure: April 15, 2026
+              </p>
+            </motion.div>
           </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section
-        id="contact"
-        className="py-36 border-t border-border relative overflow-hidden"
-      >
-        <div className="absolute inset-0 pointer-events-none">
-          <div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] rounded-full blur-[140px]"
-            style={{ background: "oklch(0.85 0.13 192 / 0.03)" }}
-          />
-        </div>
-        <div className="relative max-w-7xl mx-auto px-6 lg:px-10 text-center">
-          <RevealSection>
-            <p className="section-number mb-6 justify-center flex">
-              Ready to go
-            </p>
-            <h2
-              className="font-display leading-tight mb-10"
-              style={{ fontSize: "clamp(36px, 7vw, 100px)" }}
-            >
-              Your summit
-              <br />
-              <span className="glow-cyan">awaits.</span>
-            </h2>
-            <button
-              type="button"
-              data-ocid="cta.primary_button"
-              onClick={() => openBooking()}
-              className="inline-flex items-center gap-3 text-[11px] tracking-[0.14em] uppercase px-8 py-4 bg-foreground text-background font-semibold hover:bg-foreground/90 transition-colors"
-            >
-              Plan My Expedition <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </RevealSection>
         </div>
       </section>
 
       {/* FOOTER */}
-      <footer className="border-t border-border">
-        <div className="max-w-7xl mx-auto px-6 lg:px-10 py-16">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-12">
-            <div>
-              <div className="flex items-center gap-2.5 mb-4">
+      <footer
+        className="pt-16 pb-8"
+        style={{ borderTop: "1px solid oklch(0.31 0.03 230 / 0.4)" }}
+      >
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 mb-12">
+            <div className="lg:col-span-1">
+              <div className="flex items-center gap-2 mb-4">
                 <img
                   src="/assets/generated/mountain-explorers-logo-transparent.dim_300x300.png"
                   alt="Mountain Explorers"
-                  className="w-7 h-7 rounded-full object-cover"
+                  className="w-9 h-9 rounded-full object-cover"
                 />
-                <span className="font-sans text-[11px] font-semibold tracking-[0.14em] uppercase">
-                  Mountain Explorers
+                <span className="font-display font-bold text-sm text-foreground">
+                  MOUNTAIN <span className="text-cyan">EXPLORERS</span>
                 </span>
               </div>
-              <p className="text-muted-foreground text-xs max-w-xs leading-relaxed">
-                India's premier Himalayan trekking company. UIAA-certified
-                guides. Uncompromising safety. Unforgettable summits.
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Explore the world&apos;s highest places with those who know them
+                best.
               </p>
-              <div className="mt-6 space-y-1 text-xs text-muted-foreground">
-                <p>hello@mountainexplorers.in</p>
-                <p>+91 98765 43210</p>
-                <p>Manali, Himachal Pradesh</p>
+              <div className="flex gap-3 mt-4">
+                {SOCIAL_LINKS.map((social) => {
+                  const Icon = social.icon;
+                  return (
+                    <a
+                      key={social.label}
+                      href={social.href}
+                      data-ocid="footer.link"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={social.label}
+                      className="w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110"
+                      style={{
+                        background: "oklch(0.22 0.025 230)",
+                        border: "1px solid oklch(0.31 0.03 230 / 0.5)",
+                      }}
+                    >
+                      <Icon className="w-4 h-4 text-muted-foreground" />
+                    </a>
+                  );
+                })}
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-8">
-              <div>
-                <p className="section-number mb-4">Treks</p>
+            {Object.entries(FOOTER_LINKS).map(([category, links]) => (
+              <div key={category}>
+                <h5 className="font-display font-bold text-sm text-foreground mb-4">
+                  {category}
+                </h5>
                 <ul className="space-y-2">
-                  {["Friendship Peak", "Hampta Pass", "Kedarkantha"].map(
-                    (t) => (
-                      <li key={t}>
-                        <button
-                          type="button"
-                          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                          onClick={() => setPage("trek-detail")}
-                        >
-                          {t}
-                        </button>
-                      </li>
-                    ),
-                  )}
-                </ul>
-              </div>
-              <div>
-                <p className="section-number mb-4">Company</p>
-                <ul className="space-y-2">
-                  {["About", "Blog", "Careers", "Safety Policy"].map((l) => (
-                    <li key={l}>
-                      <span className="text-xs text-muted-foreground">{l}</span>
+                  {links.map((link) => (
+                    <li key={link}>
+                      <span className="text-xs text-muted-foreground flex items-center gap-1.5 cursor-default">
+                        {category === "Contact" && (
+                          <span className="text-cyan">
+                            {link.includes("@") ? (
+                              <Mail className="w-3 h-3" />
+                            ) : link.includes("+") ? (
+                              <Phone className="w-3 h-3" />
+                            ) : (
+                              <MapPin className="w-3 h-3" />
+                            )}
+                          </span>
+                        )}
+                        {link}
+                      </span>
                     </li>
                   ))}
                 </ul>
               </div>
-              <div>
-                <p className="section-number mb-4">Legal</p>
-                <ul className="space-y-2">
-                  {["FAQ", "Cancellation", "Privacy"].map((l) => (
-                    <li key={l}>
-                      <span className="text-xs text-muted-foreground">{l}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+            ))}
           </div>
 
-          <div className="border-t border-border pt-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <p className="text-[11px] text-muted-foreground">
-              &copy; {new Date().getFullYear()} Mountain Explorers. All rights
+          <div
+            className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground"
+            style={{ borderTop: "1px solid oklch(0.31 0.03 230 / 0.3)" }}
+          >
+            <span>
+              © {new Date().getFullYear()} Mountain Explorers India. All rights
               reserved.
-            </p>
-            <a
-              href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Built with &hearts; using caffeine.ai
-            </a>
+            </span>
+            <span>
+              Built with ❤️ using{" "}
+              <a
+                href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
+                className="text-cyan hover:underline"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                caffeine.ai
+              </a>
+            </span>
           </div>
         </div>
       </footer>
+
+      {/* FLOATING CTA */}
+      <AnimatePresence>
+        {showFloatingCTA && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            transition={{ duration: 0.3 }}
+            className="fixed bottom-6 right-6 z-50"
+          >
+            <Button
+              data-ocid="floating.primary_button"
+              onClick={() => openBooking("Friendship Peak")}
+              className="pill-btn font-bold shadow-2xl"
+              style={{
+                background: "oklch(0.85 0.13 192)",
+                color: "oklch(0.13 0.04 195)",
+                boxShadow:
+                  "0 0 30px oklch(0.85 0.13 192 / 0.5), 0 4px 20px oklch(0 0 0 / 0.4)",
+              }}
+            >
+              🏔 Book a Trek
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

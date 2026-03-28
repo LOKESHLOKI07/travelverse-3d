@@ -16,9 +16,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["GeneralSans", "Plus Jakarta Sans", "sans-serif"],
-        display: ["Playfair Display", "Georgia", "serif"],
-        body: ["GeneralSans", "Plus Jakarta Sans", "sans-serif"],
+        sans: ['Plus Jakarta Sans', 'sans-serif'],
+        display: ['Bricolage Grotesque', 'sans-serif'],
       },
       colors: {
         border: "oklch(var(--border))",
@@ -54,6 +53,13 @@ export default {
           DEFAULT: "oklch(var(--card))",
           foreground: "oklch(var(--card-foreground))",
         },
+        chart: {
+          1: "oklch(var(--chart-1))",
+          2: "oklch(var(--chart-2))",
+          3: "oklch(var(--chart-3))",
+          4: "oklch(var(--chart-4))",
+          5: "oklch(var(--chart-5))",
+        },
         sidebar: {
           DEFAULT: "oklch(var(--sidebar))",
           foreground: "oklch(var(--sidebar-foreground))",
@@ -64,11 +70,29 @@ export default {
           border: "oklch(var(--sidebar-border))",
           ring: "oklch(var(--sidebar-ring))",
         },
+        navy: {
+          deep: "oklch(0.11 0.025 232)",
+          surface: "oklch(0.18 0.025 232)",
+          card: "oklch(0.19 0.025 232)",
+          input: "oklch(0.16 0.025 230)",
+          border: "oklch(0.31 0.03 230)",
+        },
+        cyan: {
+          DEFAULT: "oklch(0.85 0.13 192)",
+          bright: "oklch(0.88 0.13 195)",
+          dark: "oklch(0.18 0.04 195)",
+        },
+        pin: "oklch(0.75 0.14 55)",
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      boxShadow: {
+        xs: "0 1px 2px 0 rgba(0,0,0,0.05)",
+        "glow-cyan": "0 0 20px oklch(0.85 0.13 192 / 0.3), 0 0 60px oklch(0.85 0.13 192 / 0.1)",
+        "glow-card": "0 8px 32px oklch(0 0 0 / 0.5), 0 0 1px oklch(0.85 0.13 192 / 0.15)",
       },
       keyframes: {
         "accordion-down": {
@@ -79,10 +103,20 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        "float": {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(-12px)" },
+        },
+        "pulse-glow": {
+          "0%, 100%": { opacity: "0.4" },
+          "50%": { opacity: "1" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "float": "float 4s ease-in-out infinite",
+        "pulse-glow": "pulse-glow 2s ease-in-out infinite",
       },
     },
   },

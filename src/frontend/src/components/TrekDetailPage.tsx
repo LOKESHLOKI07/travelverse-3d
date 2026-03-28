@@ -36,7 +36,7 @@ const ITINERARY = [
   {
     day: 4,
     title: "Rest & Acclimatization",
-    desc: "Rest day with snowcraft training \u2014 crampon use, ice axe arrest, and rope technique.",
+    desc: "Rest day with snowcraft training — crampon use, ice axe arrest, and rope technique.",
   },
   {
     day: 5,
@@ -98,7 +98,7 @@ const GALLERY_ALTS = [
 
 const PREP_TIPS = [
   "Start cardio training 8 weeks in advance",
-  "Practice hiking 8\u201310km with a loaded backpack",
+  "Practice hiking 8-10km with a loaded backpack",
   "Prior trekking experience preferred (not mandatory)",
   "High-altitude medication consultation recommended",
   "Practice breathing exercises (pranayama/box breathing)",
@@ -124,14 +124,7 @@ const ROUTE_POINTS = [
     elev: "5,000m",
     summit: false,
   },
-  {
-    x: 440,
-    y: 50,
-    day: "D8",
-    label: "Summit \u2605",
-    elev: "5,289m",
-    summit: true,
-  },
+  { x: 440, y: 50, day: "D8", label: "Summit ★", elev: "5,289m", summit: true },
 ];
 
 export default function TrekDetailPage({
@@ -142,16 +135,9 @@ export default function TrekDetailPage({
   const [guests, setGuests] = useState("2");
   const routeRef = useRef<SVGPathElement>(null);
   const [routeVisible, setRouteVisible] = useState(false);
-  const [scrollY, setScrollY] = useState(0);
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
-  }, []);
-
-  useEffect(() => {
-    const onScroll = () => setScrollY(window.scrollY);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   useEffect(() => {
@@ -165,53 +151,29 @@ export default function TrekDetailPage({
     return () => observer.disconnect();
   }, []);
 
-  const navScrolled = scrollY > 60;
-  const basePrice = 28500;
-  const totalPrice = basePrice * Number.parseInt(guests);
-
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-foreground">
-      {/* NAV */}
-      <header
-        data-ocid="nav.panel"
-        className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
-        style={{
-          background: navScrolled ? "rgba(10,10,10,0.93)" : "transparent",
-          backdropFilter: navScrolled ? "blur(20px)" : "none",
-          borderBottom: navScrolled ? "1px solid oklch(0.2 0 0)" : "none",
-        }}
-      >
-        <div className="max-w-7xl mx-auto px-6 lg:px-10 h-14 flex items-center justify-between">
-          <button
-            type="button"
-            data-ocid="nav.back_button"
-            onClick={() => setPage("home")}
-            className="flex items-center gap-2.5 group"
-          >
-            <ArrowLeft className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
-            <img
-              src="/assets/generated/mountain-explorers-logo-transparent.dim_300x300.png"
-              alt="Mountain Explorers"
-              className="w-7 h-7 rounded-full object-cover"
-            />
-            <span className="font-sans text-[11px] font-semibold tracking-[0.14em] uppercase text-foreground">
-              Mountain Explorers
-            </span>
-          </button>
-
-          <button
-            type="button"
-            data-ocid="nav.book.button"
-            onClick={() => openBooking("Friendship Peak")}
-            className="text-[11px] tracking-[0.12em] uppercase px-4 py-1.5 border border-foreground/20 text-foreground/60 hover:border-foreground/50 hover:text-foreground transition-all duration-200"
-          >
-            Book \u2014 \u20B928,500
-          </button>
-        </div>
-      </header>
+    <div className="min-h-screen">
+      {/* BACK BUTTON */}
+      <div className="fixed top-4 left-4 z-50">
+        <Button
+          data-ocid="nav.back_button"
+          onClick={() => setPage("home")}
+          variant="outline"
+          className="rounded-full gap-2 text-sm"
+          style={{
+            background: "oklch(0.13 0.025 232 / 0.9)",
+            backdropFilter: "blur(10px)",
+            borderColor: "oklch(0.31 0.03 230 / 0.6)",
+            color: "oklch(0.85 0.13 192)",
+          }}
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Home
+        </Button>
+      </div>
 
       {/* HERO */}
-      <section className="relative" style={{ height: "75vh" }}>
+      <section className="relative" style={{ height: "70vh" }}>
         <img
           src="/assets/generated/friendship-peak-hero.dim_1920x600.jpg"
           alt="Friendship Peak Himalayan Expedition"
@@ -221,134 +183,181 @@ export default function TrekDetailPage({
           className="absolute inset-0"
           style={{
             background:
-              "linear-gradient(to bottom, rgba(10,10,10,0.3) 0%, rgba(10,10,10,0.7) 60%, #0a0a0a 100%)",
+              "linear-gradient(to bottom, oklch(0.05 0.015 232 / 0.5) 0%, oklch(0.09 0.02 232 / 0.9) 100%)",
           }}
         />
-        <div className="absolute inset-0 flex flex-col justify-end max-w-7xl mx-auto px-6 lg:px-10 pb-16">
+
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.85 }}
+            transition={{ duration: 0.8 }}
+            className="space-y-5 max-w-3xl"
           >
-            <p className="section-number mb-4">
-              Himalayan Expedition \u2014 Himachal Pradesh
+            <p className="text-cyan text-xs font-bold tracking-[0.3em] uppercase">
+              HIMALAYAN EXPEDITION
             </p>
             <h1
-              className="font-display font-bold leading-none tracking-tight"
-              style={{ fontSize: "clamp(48px, 8vw, 120px)" }}
+              className="font-display font-extrabold text-foreground"
+              style={{ fontSize: "clamp(40px, 6vw, 80px)" }}
             >
-              Friendship
+              Friendship Peak
             </h1>
-            <h1
-              className="font-display font-bold leading-none tracking-tight"
+
+            <div
+              className="inline-flex flex-wrap items-center gap-4 px-6 py-3 rounded-2xl text-sm"
               style={{
-                fontSize: "clamp(48px, 8vw, 120px)",
-                color: "transparent",
-                WebkitTextStroke: "1px rgba(245,245,240,0.4)",
+                background: "oklch(0.13 0.025 232 / 0.8)",
+                backdropFilter: "blur(16px)",
+                border: "1px solid oklch(0.31 0.03 230 / 0.5)",
               }}
             >
-              Peak
-            </h1>
+              <span className="flex items-center gap-1.5 text-foreground">
+                ⏱ <span className="font-semibold">8 Days</span>
+              </span>
+              <span className="text-muted-foreground">|</span>
+              <span className="flex items-center gap-1.5 text-foreground">
+                <Mountain className="w-4 h-4 text-cyan" />
+                <span className="font-semibold">5,289m</span>
+              </span>
+              <span className="text-muted-foreground">|</span>
+              <span className="flex items-center gap-1.5 text-orange">
+                ⚡ <span className="font-semibold">Moderate-Hard</span>
+              </span>
+              <span className="text-muted-foreground">|</span>
+              <span className="flex items-center gap-1.5 text-foreground">
+                <Users className="w-4 h-4 text-cyan" />
+                <span className="font-semibold">Max 8 people</span>
+              </span>
+            </div>
+
+            <Button
+              data-ocid="trek.primary_button"
+              onClick={() => openBooking("Friendship Peak")}
+              className="pill-btn font-bold tracking-wider text-base px-10 py-3"
+              style={{
+                background: "oklch(0.85 0.13 192)",
+                color: "oklch(0.13 0.04 195)",
+                boxShadow: "0 0 30px oklch(0.85 0.13 192 / 0.4)",
+              }}
+            >
+              Book Now — ₹28,500
+            </Button>
           </motion.div>
         </div>
       </section>
 
-      {/* QUICK STATS */}
-      <div className="border-b border-border">
-        <div className="max-w-7xl mx-auto px-6 lg:px-10">
-          <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-border">
-            {[
-              {
-                label: "Altitude",
-                value: "5,289m",
-                icon: <Mountain className="w-3.5 h-3.5" />,
-              },
-              { label: "Duration", value: "8 Days", icon: null },
-              { label: "Difficulty", value: "Moderate\u2013Hard", icon: null },
-              {
-                label: "Group Size",
-                value: "Max 8",
-                icon: <Users className="w-3.5 h-3.5" />,
-              },
-            ].map(({ label, value, icon }) => (
-              <div key={label} className="py-5 px-4 first:pl-0">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1 flex items-center gap-1.5">
-                  {icon}
-                  {label}
-                </p>
-                <p className="font-semibold text-sm">{value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
       {/* MAIN CONTENT */}
-      <div className="max-w-7xl mx-auto px-6 lg:px-10 py-20">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
-          {/* Content */}
-          <div className="lg:col-span-2 space-y-20">
-            {/* Route */}
+      <div className="max-w-7xl mx-auto px-6 py-16">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+          {/* Main content col */}
+          <div className="lg:col-span-2 space-y-16">
+            {/* TREK ROUTE VISUALIZATION */}
             <section>
-              <p className="section-number mb-6">Route Overview</p>
-              <div className="border border-border p-6 overflow-x-auto">
+              <h2 className="font-display font-extrabold text-2xl text-foreground mb-6">
+                Trek Route
+              </h2>
+              <div
+                className="glass-card rounded-2xl p-6 overflow-x-auto"
+                style={{
+                  boxShadow: "0 0 40px oklch(0.85 0.13 192 / 0.05)",
+                }}
+              >
                 <svg
-                  viewBox="0 0 500 320"
-                  className="w-full min-w-[400px]"
                   role="img"
-                  aria-label="Trek route elevation profile"
+                  aria-label="Friendship Peak trek route from Manali to summit"
+                  viewBox="0 0 500 320"
+                  className="w-full"
+                  style={{ minWidth: "360px" }}
                 >
-                  {[50, 100, 150, 200, 250, 300].map((y) => (
-                    <line
-                      key={y}
-                      x1="20"
-                      y1={y}
-                      x2="480"
-                      y2={y}
-                      stroke="oklch(0.2 0 0)"
-                      strokeWidth="0.5"
-                      strokeDasharray="4,6"
-                    />
-                  ))}
+                  <defs>
+                    <linearGradient id="routeGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop
+                        offset="0%"
+                        stopColor="oklch(0.85 0.13 192)"
+                        stopOpacity="0.12"
+                      />
+                      <stop
+                        offset="100%"
+                        stopColor="oklch(0.85 0.13 192)"
+                        stopOpacity="0"
+                      />
+                    </linearGradient>
+                  </defs>
+
+                  <path
+                    d="M 40 280 Q 90 260 140 240 Q 180 225 220 200 Q 260 175 290 150 Q 320 125 360 100 Q 400 75 440 50"
+                    fill="url(#routeGrad)"
+                    stroke="none"
+                  />
                   <path
                     ref={routeRef}
-                    d={`M ${ROUTE_POINTS.map((p) => `${p.x},${p.y}`).join(" L ")}`}
+                    d="M 40 280 Q 90 260 140 240 Q 180 225 220 200 Q 260 175 290 150 Q 320 125 360 100 Q 400 75 440 50"
                     fill="none"
                     stroke="oklch(0.85 0.13 192)"
-                    strokeWidth="1.5"
-                    strokeDasharray={routeVisible ? "none" : "1000"}
-                    strokeDashoffset={routeVisible ? "0" : "1000"}
-                    style={{ transition: "stroke-dashoffset 2s ease" }}
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    className={routeVisible ? "animate-path" : ""}
+                    style={{ strokeDasharray: 1000, strokeDashoffset: 1000 }}
                   />
+
                   {ROUTE_POINTS.map((pt) => (
-                    <g key={pt.label}>
+                    <g key={pt.day}>
                       <circle
                         cx={pt.x}
                         cy={pt.y}
-                        r={pt.summit ? 6 : 4}
-                        fill={pt.summit ? "oklch(0.85 0.13 192)" : "#0a0a0a"}
+                        r="12"
+                        fill={
+                          pt.summit
+                            ? "oklch(0.75 0.14 55 / 0.15)"
+                            : "oklch(0.85 0.13 192 / 0.1)"
+                        }
+                      />
+                      <circle
+                        cx={pt.x}
+                        cy={pt.y}
+                        r="6"
+                        fill={
+                          pt.summit
+                            ? "oklch(0.75 0.14 55)"
+                            : "oklch(0.16 0.025 232)"
+                        }
                         stroke={
-                          pt.summit ? "oklch(0.85 0.13 192)" : "oklch(0.38 0 0)"
+                          pt.summit
+                            ? "oklch(0.75 0.14 55)"
+                            : "oklch(0.85 0.13 192)"
                         }
                         strokeWidth="1.5"
                       />
                       <text
-                        x={pt.x}
-                        y={pt.y - 10}
-                        textAnchor="middle"
-                        fill="oklch(0.6 0 0)"
+                        x={pt.x + 14}
+                        y={pt.y - 6}
+                        fill="oklch(0.85 0.13 192)"
                         fontSize="9"
-                        fontFamily="sans-serif"
+                        fontWeight="700"
+                        fontFamily="Bricolage Grotesque, sans-serif"
+                      >
+                        {pt.day}
+                      </text>
+                      <text
+                        x={pt.x + 14}
+                        y={pt.y + 7}
+                        fill="oklch(0.75 0.03 220)"
+                        fontSize="8"
+                        fontFamily="Plus Jakarta Sans, sans-serif"
                       >
                         {pt.label}
                       </text>
                       <text
-                        x={pt.x}
-                        y={pt.y + 20}
-                        textAnchor="middle"
-                        fill="oklch(0.4 0 0)"
+                        x={pt.x + 14}
+                        y={pt.y + 19}
+                        fill={
+                          pt.summit
+                            ? "oklch(0.75 0.14 55)"
+                            : "oklch(0.6 0.03 220)"
+                        }
                         fontSize="8"
-                        fontFamily="sans-serif"
+                        fontFamily="Plus Jakarta Sans, sans-serif"
                       >
                         {pt.elev}
                       </text>
@@ -358,31 +367,92 @@ export default function TrekDetailPage({
               </div>
             </section>
 
-            {/* Itinerary */}
+            {/* ITINERARY */}
             <section>
-              <p className="section-number mb-8">8-Day Itinerary</p>
-              <div
-                className="space-y-0 border-t border-border"
-                data-ocid="itinerary.list"
-              >
+              <h2 className="font-display font-extrabold text-2xl text-foreground mb-8">
+                Itinerary
+              </h2>
+              <div className="space-y-4">
                 {ITINERARY.map((item, i) => (
-                  <div
+                  <motion.div
                     key={item.day}
                     data-ocid={`itinerary.item.${i + 1}`}
-                    className="border-b border-border py-6 grid grid-cols-[3rem_1fr] gap-6 group hover:bg-[#111] transition-colors px-2"
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.4, delay: i * 0.06 }}
+                    className="flex gap-4 glass-card rounded-xl p-4"
                   >
                     <div
-                      className="font-display text-3xl font-bold"
-                      style={{ color: "oklch(0.2 0 0)" }}
+                      className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-display font-bold text-sm"
+                      style={{
+                        background:
+                          item.day === 8
+                            ? "oklch(0.75 0.14 55 / 0.15)"
+                            : "oklch(0.85 0.13 192 / 0.1)",
+                        border:
+                          item.day === 8
+                            ? "1px solid oklch(0.75 0.14 55 / 0.4)"
+                            : "1px solid oklch(0.85 0.13 192 / 0.4)",
+                        color:
+                          item.day === 8
+                            ? "oklch(0.75 0.14 55)"
+                            : "oklch(0.85 0.13 192)",
+                      }}
                     >
-                      {String(item.day).padStart(2, "0")}
+                      {item.day}
                     </div>
                     <div>
-                      <h4 className="font-semibold text-sm group-hover:text-cyan transition-colors">
-                        {item.title}
+                      <h4 className="font-semibold text-foreground mb-1">
+                        Day {item.day}: {item.title}
                       </h4>
-                      <p className="text-muted-foreground text-sm mt-1 leading-relaxed">
+                      <p className="text-sm text-muted-foreground">
                         {item.desc}
+                      </p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </section>
+
+            {/* EXPERIENCE HIGHLIGHTS */}
+            <section>
+              <h2 className="font-display font-extrabold text-2xl text-foreground mb-6">
+                Experience Highlights
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {[
+                  {
+                    label: "Above the Clouds",
+                    img: "/assets/generated/experience-above-clouds.dim_800x500.jpg",
+                  },
+                  {
+                    label: "Snow Training",
+                    img: "/assets/generated/experience-snow-training.dim_800x500.jpg",
+                  },
+                  {
+                    label: "Summit Sunrise",
+                    img: "/assets/generated/experience-summit-sunrise.dim_800x500.jpg",
+                  },
+                ].map((exp) => (
+                  <div
+                    key={exp.label}
+                    className="rounded-xl overflow-hidden relative group"
+                  >
+                    <img
+                      src={exp.img}
+                      alt={exp.label}
+                      className="w-full h-40 object-cover transition-transform duration-500 group-hover:scale-110"
+                    />
+                    <div
+                      className="absolute bottom-0 left-0 right-0 p-3"
+                      style={{
+                        background:
+                          "linear-gradient(to top, oklch(0.09 0.018 232 / 0.9), transparent)",
+                      }}
+                    >
+                      <p className="text-xs font-semibold text-foreground">
+                        {exp.label}
                       </p>
                     </div>
                   </div>
@@ -390,40 +460,96 @@ export default function TrekDetailPage({
               </div>
             </section>
 
-            {/* Inclusions */}
+            {/* INCLUSIONS / EXCLUSIONS */}
             <section>
-              <p className="section-number mb-8">What's Included</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-10">
-                <div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-4">
-                    Included
-                  </p>
-                  <ul className="space-y-3" data-ocid="inclusions.list">
-                    {INCLUSIONS.map((item, i) => (
-                      <li
-                        key={item}
-                        data-ocid={`inclusions.item.${i + 1}`}
-                        className="flex items-start gap-3 text-sm"
-                      >
-                        <CheckCircle className="w-4 h-4 text-cyan shrink-0 mt-0.5" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
+              <h2 className="font-display font-extrabold text-2xl text-foreground mb-6">
+                What&apos;s Included
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="glass-card rounded-xl p-5 space-y-3">
+                  <h4 className="font-display font-bold text-foreground mb-3 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-cyan" /> Included
+                  </h4>
+                  {INCLUSIONS.map((item) => (
+                    <div
+                      key={item}
+                      className="flex items-center gap-2.5 text-sm"
+                    >
+                      <span className="text-cyan font-bold">✓</span>
+                      <span className="text-foreground">{item}</span>
+                    </div>
+                  ))}
                 </div>
+                <div className="glass-card rounded-xl p-5 space-y-3">
+                  <h4 className="font-display font-bold text-foreground mb-3 flex items-center gap-2">
+                    <XCircle className="w-4 h-4 text-orange" /> Not Included
+                  </h4>
+                  {EXCLUSIONS.map((item) => (
+                    <div
+                      key={item}
+                      className="flex items-center gap-2.5 text-sm"
+                    >
+                      <span className="text-orange">✗</span>
+                      <span className="text-muted-foreground">{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            {/* DIFFICULTY */}
+            <section>
+              <h2 className="font-display font-extrabold text-2xl text-foreground mb-6">
+                Difficulty &amp; Preparation
+              </h2>
+              <div className="glass-card rounded-2xl p-6 space-y-5">
                 <div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-4">
-                    Not Included
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-muted-foreground">Easy</span>
+                    <span className="text-sm font-bold text-orange">
+                      Moderate-Hard (3.5/5)
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      Expert
+                    </span>
+                  </div>
+                  <div
+                    className="h-3 rounded-full overflow-hidden"
+                    style={{ background: "oklch(0.22 0.025 230)" }}
+                  >
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: "70%",
+                        background:
+                          "linear-gradient(to right, oklch(0.85 0.13 192), oklch(0.75 0.14 55))",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold text-foreground mb-3">
+                    Fitness Requirements
+                  </h4>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Can hike 8-10km/day • No technical climbing experience
+                    required • Prior trekking experience preferred
                   </p>
-                  <ul className="space-y-3" data-ocid="exclusions.list">
-                    {EXCLUSIONS.map((item, i) => (
+                </div>
+
+                <div>
+                  <h4 className="font-semibold text-foreground mb-3">
+                    Preparation Tips
+                  </h4>
+                  <ul className="space-y-2">
+                    {PREP_TIPS.map((tip) => (
                       <li
-                        key={item}
-                        data-ocid={`exclusions.item.${i + 1}`}
-                        className="flex items-start gap-3 text-sm"
+                        key={tip}
+                        className="flex items-start gap-2 text-sm text-muted-foreground"
                       >
-                        <XCircle className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-                        <span className="text-muted-foreground">{item}</span>
+                        <span className="text-cyan mt-0.5">→</span>
+                        {tip}
                       </li>
                     ))}
                   </ul>
@@ -431,148 +557,204 @@ export default function TrekDetailPage({
               </div>
             </section>
 
-            {/* Prep tips */}
+            {/* GALLERY */}
             <section>
-              <p className="section-number mb-6">Preparation Tips</p>
-              <ul className="space-y-3">
-                {PREP_TIPS.map((tip, i) => (
-                  <li
-                    key={tip}
-                    className="flex items-start gap-3 text-sm text-muted-foreground"
-                  >
-                    <span className="text-cyan font-mono text-xs mt-0.5 shrink-0">
-                      0{i + 1}
-                    </span>
-                    {tip}
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            {/* Gallery */}
-            <section>
-              <p className="section-number mb-6">Gallery</p>
-              <div
-                className="grid grid-cols-2 sm:grid-cols-3 gap-1.5"
-                data-ocid="gallery.list"
-              >
-                {GALLERY_IMAGES.map((src, i) => (
-                  <div
-                    key={src}
+              <h2 className="font-display font-extrabold text-2xl text-foreground mb-6">
+                Gallery
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {GALLERY_IMAGES.map((img, i) => (
+                  <motion.div
+                    key={GALLERY_ALTS[i]}
                     data-ocid={`gallery.item.${i + 1}`}
-                    className="aspect-square overflow-hidden"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.4, delay: i * 0.08 }}
+                    className="rounded-xl overflow-hidden group cursor-pointer"
+                    style={{
+                      aspectRatio: i === 0 || i === 5 ? "4/3" : "1/1",
+                    }}
                   >
                     <img
-                      src={src}
+                      src={img}
                       alt={GALLERY_ALTS[i]}
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      loading="lazy"
                     />
-                  </div>
+                  </motion.div>
                 ))}
+              </div>
+            </section>
+
+            {/* MOBILE BOOKING */}
+            <section className="lg:hidden">
+              <div
+                className="glass-card rounded-2xl p-6"
+                style={{
+                  boxShadow:
+                    "0 0 40px oklch(0.85 0.13 192 / 0.1), 0 0 0 1px oklch(0.85 0.13 192 / 0.15)",
+                }}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <span className="font-display font-extrabold text-3xl text-cyan">
+                    ₹28,500
+                  </span>
+                  <span className="text-sm text-muted-foreground">/person</span>
+                </div>
+                <div className="flex items-center gap-1 mb-4">
+                  {["1", "2", "3", "4", "5"].map((n) => (
+                    <Star
+                      key={`star-mobile-${n}`}
+                      className="w-4 h-4"
+                      style={{
+                        fill: "oklch(0.82 0.17 85)",
+                        color: "oklch(0.82 0.17 85)",
+                      }}
+                    />
+                  ))}
+                  <span className="text-sm text-muted-foreground ml-1">
+                    4.9 (156 reviews)
+                  </span>
+                </div>
+                <Button
+                  data-ocid="trek.mobile_button"
+                  onClick={() => openBooking("Friendship Peak")}
+                  className="w-full pill-btn font-bold"
+                  style={{
+                    background: "oklch(0.85 0.13 192)",
+                    color: "oklch(0.13 0.04 195)",
+                  }}
+                >
+                  Book Now
+                </Button>
               </div>
             </section>
           </div>
 
-          {/* Booking card */}
-          <div className="lg:col-span-1">
+          {/* STICKY BOOKING CARD */}
+          <div className="hidden lg:block">
             <div
-              className="sticky top-20 border border-border p-8"
-              data-ocid="booking.panel"
+              className="sticky top-24 glass-card rounded-2xl p-6 space-y-5"
+              style={{
+                boxShadow:
+                  "0 0 60px oklch(0.85 0.13 192 / 0.12), 0 0 0 1px oklch(0.85 0.13 192 / 0.2)",
+              }}
             >
-              <p className="section-number mb-2">Reserve your spot</p>
-              <div className="mb-6">
-                <span className="font-display text-4xl font-bold">
-                  \u20B928,500
-                </span>
-                <span className="text-muted-foreground text-xs ml-2 uppercase tracking-widest">
-                  per person
-                </span>
+              <div>
+                <div className="flex items-baseline gap-2">
+                  <span className="font-display font-extrabold text-3xl text-cyan">
+                    ₹28,500
+                  </span>
+                  <span className="text-sm text-muted-foreground">/person</span>
+                </div>
+                <div className="flex items-center gap-1 mt-1">
+                  {["1", "2", "3", "4", "5"].map((n) => (
+                    <Star
+                      key={`star-sidebar-${n}`}
+                      className="w-3.5 h-3.5"
+                      style={{
+                        fill: "oklch(0.82 0.17 85)",
+                        color: "oklch(0.82 0.17 85)",
+                      }}
+                    />
+                  ))}
+                  <span className="text-xs text-muted-foreground ml-1">
+                    4.9 (156 reviews)
+                  </span>
+                </div>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div>
                   <label
-                    htmlFor="booking-date"
-                    className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-2"
+                    htmlFor="trek-date"
+                    className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1"
                   >
-                    Departure Date
+                    Trek Date
                   </label>
                   <input
-                    id="booking-date"
+                    id="trek-date"
                     data-ocid="booking.input"
                     type="date"
                     value={bookingDate}
                     onChange={(e) => setBookingDate(e.target.value)}
-                    className="w-full px-3 py-2.5 text-sm border border-border bg-transparent text-foreground focus:outline-none focus:border-foreground/50 transition-colors"
-                    min={new Date().toISOString().split("T")[0]}
+                    className="w-full rounded-lg px-3 py-2 text-sm text-foreground"
+                    style={{
+                      background: "oklch(0.14 0.025 232)",
+                      border: "1px solid oklch(0.31 0.03 230)",
+                      colorScheme: "dark",
+                    }}
                   />
                 </div>
 
                 <div>
                   <label
-                    htmlFor="booking-guests"
-                    className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-2"
+                    htmlFor="trek-guests"
+                    className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1"
                   >
-                    Number of Guests
+                    Guests
                   </label>
                   <select
-                    id="booking-guests"
+                    id="trek-guests"
                     data-ocid="booking.select"
                     value={guests}
                     onChange={(e) => setGuests(e.target.value)}
-                    className="w-full px-3 py-2.5 text-sm border border-border bg-[#0a0a0a] text-foreground focus:outline-none focus:border-foreground/50 transition-colors"
+                    className="w-full rounded-lg px-3 py-2 text-sm text-foreground"
+                    style={{
+                      background: "oklch(0.14 0.025 232)",
+                      border: "1px solid oklch(0.31 0.03 230)",
+                    }}
                   >
                     {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
                       <option key={n} value={n}>
-                        {n} {n === 1 ? "Guest" : "Guests"}
+                        {n} {n === 1 ? "person" : "people"}
                       </option>
                     ))}
                   </select>
                 </div>
+              </div>
 
-                <div className="border-t border-border pt-4">
-                  <div className="flex justify-between text-xs mb-1.5">
-                    <span className="text-muted-foreground">
-                      \u20B928,500 \u00D7 {guests} guests
-                    </span>
-                    <span>\u20B9{totalPrice.toLocaleString("en-IN")}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">
-                      Equipment & permits
-                    </span>
-                    <span className="text-cyan">Included</span>
-                  </div>
-                </div>
-
-                <Button
-                  data-ocid="booking.submit_button"
-                  className="w-full rounded-none mt-2"
-                  style={{
-                    background: "oklch(0.97 0.003 90)",
-                    color: "#0a0a0a",
-                    letterSpacing: "0.1em",
-                    textTransform: "uppercase",
-                    fontSize: "0.7rem",
-                    fontWeight: 600,
-                    height: "3rem",
-                  }}
-                  onClick={() => openBooking("Friendship Peak")}
-                >
-                  Book \u2014 \u20B9{totalPrice.toLocaleString("en-IN")}
-                </Button>
-
-                <div className="flex items-center justify-center gap-1 mt-1">
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <Star
-                      key={s}
-                      className="w-3 h-3 fill-amber-400 text-amber-400"
-                    />
-                  ))}
-                  <span className="text-[11px] text-muted-foreground ml-1">
-                    4.9 (127 reviews)
+              <div
+                className="pt-2 pb-2"
+                style={{
+                  borderTop: "1px solid oklch(0.31 0.03 230 / 0.4)",
+                  borderBottom: "1px solid oklch(0.31 0.03 230 / 0.4)",
+                }}
+              >
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    ₹28,500 × {guests} person{Number(guests) > 1 ? "s" : ""}
+                  </span>
+                  <span className="text-foreground font-semibold">
+                    ₹{(28500 * Number(guests)).toLocaleString("en-IN")}
                   </span>
                 </div>
+              </div>
+
+              <Button
+                data-ocid="booking.submit_button"
+                onClick={() => openBooking("Friendship Peak")}
+                className="w-full pill-btn font-bold tracking-wider"
+                style={{
+                  background: "oklch(0.85 0.13 192)",
+                  color: "oklch(0.13 0.04 195)",
+                  boxShadow: "0 0 30px oklch(0.85 0.13 192 / 0.35)",
+                }}
+              >
+                Book Now
+              </Button>
+
+              <p className="text-center text-xs text-muted-foreground">
+                Free cancellation up to 14 days before departure
+              </p>
+
+              <div
+                className="flex items-center gap-2 p-3 rounded-xl text-xs text-muted-foreground"
+                style={{ background: "oklch(0.16 0.025 232)" }}
+              >
+                <span className="text-cyan">ℹ️</span>
+                Next available date: April 15, 2026 • Limited to 8 trekkers
               </div>
             </div>
           </div>
@@ -580,23 +762,33 @@ export default function TrekDetailPage({
       </div>
 
       {/* FOOTER */}
-      <footer className="border-t border-border mt-20">
-        <div className="max-w-7xl mx-auto px-6 lg:px-10 py-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <button
-            type="button"
-            onClick={() => setPage("home")}
-            className="text-[11px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
-          >
-            <ArrowLeft className="w-3 h-3" /> Back to all treks
-          </button>
-          <a
-            href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Built with &hearts; using caffeine.ai
-          </a>
+      <footer
+        className="py-8 mt-16"
+        style={{ borderTop: "1px solid oklch(0.31 0.03 230 / 0.4)" }}
+      >
+        <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <img
+              src="/assets/generated/mountain-explorers-logo-transparent.dim_300x300.png"
+              alt="Mountain Explorers"
+              className="w-8 h-8 rounded-full object-cover"
+            />
+            <span className="font-display font-bold text-sm text-foreground">
+              MOUNTAIN <span className="text-cyan">EXPLORERS</span>
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            © {new Date().getFullYear()} Mountain Explorers India. Built with ❤️
+            using{" "}
+            <a
+              href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
+              className="text-cyan hover:underline"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              caffeine.ai
+            </a>
+          </p>
         </div>
       </footer>
     </div>

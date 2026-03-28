@@ -1,37 +1,28 @@
-# Mountain Explorers - Montfort-Inspired Redesign
+# TravelVerse 3D
 
 ## Current State
-Premium cinematic Mountain Explorers site with glassmorphism panels, floating particles, 3D India map, hero section, featured treks, testimonials, booking preview, and Friendship Peak detail page.
+Premium Mountain Explorers website with cinematic homepage, 3D India map (IndiaMap3D.tsx using React Three Fiber), trek detail pages, glassmorphism UI, and Montfort-inspired editorial layout.
 
 ## Requested Changes (Diff)
 
 ### Add
-- Full-screen hero with large split-line typography like Montfort ("Mountain" / "Explorers" stacked bold)
-- "Scroll down to discover" animated prompt at bottom of hero
-- Numbered section blocks (01, 02, 03...) for each major content section
-- Clean top navigation bar with links on the right side (no hamburger on desktop)
-- India destinations showcase replacing a section (similar to Montfort's global offices grid)
-- Clean editorial section layout with large section numbers and serif headings
-- Sticky side navigation dots or section indicators
+- `SnowTerrain3D.tsx`: A new immersive 3D snow terrain component using React Three Fiber
+  - Uses the 4 uploaded snow AO texture maps as PBR textures on a 3D plane geometry with displacement
+  - Features: animated snow particles, dynamic lighting, fog effects, auto-rotating camera
+  - Appears as a full-width hero section on the homepage replacing or enhancing the current hero
+- Snow texture cycling/carousel: user can click to see different snow textures applied to the terrain
 
 ### Modify
-- Overall layout: switch from card-grid heavy layout to clean editorial sectioned scrolling
-- Navigation: minimal top bar, logo left, links right, ultra-clean
-- Typography: larger, bolder display headings; tight tracking; mix of serif + sans
-- Color palette: deep black/dark grey base, white text, with Mountain Explorers signature cyan/orange accents (not overloaded)
-- Hero: massive full-screen typography instead of current centered-card approach
-- Trek cards: keep but redesign with cleaner lines, numbered, less glassmorphism clutter
-- Spacing: premium generous whitespace like Montfort
+- `HomePage.tsx`: Add the SnowTerrain3D component as an immersive hero section at the top, with Mountain Explorers branding overlaid
 
 ### Remove
-- Excessive floating particles/elements that clutter the reading experience
-- Multiple competing glow effects
-- Busy background noise textures
+- Nothing removed
 
 ## Implementation Plan
-1. Redesign HomePage.tsx with Montfort-inspired layout: full-screen hero with stacked bold typography, scroll prompt, clean numbered sections
-2. Redesign navigation: slim top bar, logo left, navigation links right
-3. Redesign trek section with numbered editorial cards
-4. Add India destinations grid section (pin locations as clean grid)
-5. Keep TrekDetailPage.tsx largely intact, update nav style
-6. Clean up index.css: simplify particle/glow effects, improve typography scale
+1. Create `SnowTerrain3D.tsx` using @react-three/fiber and @react-three/drei
+2. Build a displaced plane geometry (128x128 segments) with snow AO texture as aoMap
+3. Add ambient + directional lighting with blue-tinted shadows for snowy atmosphere
+4. Add animated snow particle system (500-1000 particles)
+5. Add subtle fog and dark sky background
+6. Overlay Mountain Explorers branding text using HTML overlay (not R3F HTML)
+7. Wire into HomePage.tsx as hero section

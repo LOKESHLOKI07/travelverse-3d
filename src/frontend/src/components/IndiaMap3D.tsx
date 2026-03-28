@@ -128,6 +128,50 @@ const PINS = [
   y: (pin.lat - 22) * 0.16,
 }));
 
+// Starfield background
+function Starfield() {
+  const geometry = useMemo(() => {
+    const geo = new THREE.BufferGeometry();
+    const count = 200;
+    const positions = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 40;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 40;
+      positions[i * 3 + 2] = -5 - Math.random() * 5;
+    }
+    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    return geo;
+  }, []);
+
+  return (
+    <points geometry={geometry}>
+      <pointsMaterial
+        color="#b0d4ff"
+        size={0.06}
+        transparent
+        opacity={0.7}
+        sizeAttenuation
+      />
+    </points>
+  );
+}
+
+// Ocean base plane
+function OceanBase() {
+  return (
+    <mesh position={[0, 0, -0.45]} rotation={[0, 0, 0]}>
+      <planeGeometry args={[18, 18, 32, 32]} />
+      <meshStandardMaterial
+        color="#020f1a"
+        emissive="#041828"
+        emissiveIntensity={0.3}
+        roughness={0.9}
+        metalness={0.05}
+      />
+    </mesh>
+  );
+}
+
 function IndiaShape({ onPinClick }: { onPinClick: (label: string) => void }) {
   const geometry = useMemo(() => {
     const shape = new THREE.Shape();
@@ -138,34 +182,50 @@ function IndiaShape({ onPinClick }: { onPinClick: (label: string) => void }) {
     shape.closePath();
 
     const extrudeSettings = {
-      depth: 0.3,
+      depth: 0.5,
       bevelEnabled: true,
-      bevelThickness: 0.04,
+      bevelThickness: 0.05,
       bevelSize: 0.04,
-      bevelSegments: 3,
+      bevelSegments: 4,
     };
     return new THREE.ExtrudeGeometry(shape, extrudeSettings);
   }, []);
 
+  // Slightly scaled-up version for border halo
+  const glowGeometry = useMemo(() => {
+    const shape = new THREE.Shape();
+    const scale = 1.018;
+    INDIA_POINTS.forEach(([x, y], i) => {
+      if (i === 0) shape.moveTo(x * scale, y * scale);
+      else shape.lineTo(x * scale, y * scale);
+    });
+    shape.closePath();
+    return new THREE.ExtrudeGeometry(shape, {
+      depth: 0.52,
+      bevelEnabled: false,
+    });
+  }, []);
+
   return (
     <group>
-      <mesh geometry={geometry} position={[0, 0, -0.15]}>
-        <meshStandardMaterial
-          color="#0d4a52"
-          emissive="#0a8a9f"
-          emissiveIntensity={0.25}
-          roughness={0.4}
-          metalness={0.3}
+      {/* Border halo — BackSide trick */}
+      <mesh geometry={glowGeometry} position={[0, 0, -0.25]}>
+        <meshBasicMaterial
+          color="#22e6e2"
+          side={THREE.BackSide}
+          transparent
+          opacity={0.55}
         />
       </mesh>
 
-      {/* Outline glow */}
-      <mesh geometry={geometry} position={[0, 0, -0.15]}>
-        <meshBasicMaterial
-          color="#22e6e2"
-          wireframe
-          transparent
-          opacity={0.12}
+      {/* Main India shape */}
+      <mesh geometry={geometry} position={[0, 0, -0.25]}>
+        <meshStandardMaterial
+          color="#1a6b5a"
+          emissive="#0d9e8a"
+          emissiveIntensity={0.22}
+          roughness={0.6}
+          metalness={0.1}
         />
       </mesh>
 
@@ -196,21 +256,30 @@ function PinMarker({
   label: string;
   onPinClick: (label: string) => void;
 }) {
-  const ref = useRef<THREE.Mesh>(null);
+  const stemRef = useRef<THREE.Mesh>(null);
+  const headRef = useRef<THREE.Mesh>(null);
+  const glowRef = useRef<THREE.Mesh>(null);
   const ringRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
 
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
-    if (ref.current) {
-      const pulse = hovered ? 1.5 : 1 + Math.sin(t * 2.5) * 0.25;
-      ref.current.scale.setScalar(pulse);
+    const pulse = hovered ? 1.6 : 1 + Math.sin(t * 2.5) * 0.2;
+    if (headRef.current) headRef.current.scale.setScalar(pulse);
+    if (glowRef.current) {
+      const glowPulse = 1 + Math.sin(t * 2.0) * 0.15;
+      glowRef.current.scale.setScalar(glowPulse);
+      const mat = glowRef.current.material as THREE.MeshBasicMaterial;
+      mat.opacity = hovered ? 0.35 : 0.18 + Math.sin(t * 2.0) * 0.06;
     }
     if (ringRef.current) {
       const expand = 1 + ((t * 1.5) % 1) * 1.5;
       ringRef.current.scale.setScalar(expand);
       const mat = ringRef.current.material as THREE.MeshBasicMaterial;
       mat.opacity = 0.5 - ((t * 1.5) % 1) * 0.5;
+    }
+    if (stemRef.current) {
+      stemRef.current.scale.y = hovered ? 1.3 : 1.0;
     }
   });
 
@@ -219,22 +288,52 @@ function PinMarker({
   return (
     // biome-ignore lint/a11y/useKeyWithClickEvents: 3D canvas element — keyboard nav handled via legend overlay
     <group
-      position={[x, y, 0.2]}
+      position={[x, y, 0.3]}
       onClick={handleClick}
       onPointerOver={() => setHovered(true)}
       onPointerOut={() => setHovered(false)}
     >
-      <mesh ref={ref}>
-        <sphereGeometry args={[0.1, 12, 12]} />
+      {/* Pin stem (cone pointing down) */}
+      <mesh ref={stemRef} position={[0, -0.14, 0]} rotation={[Math.PI, 0, 0]}>
+        <coneGeometry args={[0.04, 0.22, 8]} />
+        <meshStandardMaterial
+          color={color}
+          emissive={color}
+          emissiveIntensity={hovered ? 1.5 : 0.8}
+          roughness={0.2}
+        />
+      </mesh>
+
+      {/* Pin head (sphere) */}
+      <mesh ref={headRef} position={[0, 0.06, 0]}>
+        <sphereGeometry args={[0.1, 14, 14]} />
         <meshStandardMaterial
           color={color}
           emissive={color}
           emissiveIntensity={hovered ? 3 : 2}
           roughness={0.1}
+          metalness={0.1}
         />
       </mesh>
-      <mesh ref={ringRef}>
-        <ringGeometry args={[0.1, 0.18, 16]} />
+
+      {/* Glow sphere */}
+      <mesh ref={glowRef} position={[0, 0.06, 0]}>
+        <sphereGeometry args={[0.2, 12, 12]} />
+        <meshBasicMaterial
+          color={color}
+          transparent
+          opacity={0.18}
+          side={THREE.FrontSide}
+        />
+      </mesh>
+
+      {/* Ripple ring */}
+      <mesh
+        ref={ringRef}
+        position={[0, -0.03, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+      >
+        <ringGeometry args={[0.1, 0.18, 20]} />
         <meshBasicMaterial
           color={color}
           transparent
@@ -247,17 +346,43 @@ function PinMarker({
 }
 
 function SceneContent({ onPinClick }: { onPinClick: (label: string) => void }) {
+  const controlsRef = useRef<any>(null);
+
   return (
     <>
-      <ambientLight intensity={0.5} />
-      <pointLight position={[5, 5, 5]} intensity={1.5} color="#ffffff" />
-      <pointLight position={[-4, -3, 4]} intensity={0.8} color="#22e6e2" />
-      <pointLight position={[0, 0, 6]} intensity={0.4} color="#39e9ff" />
+      {/* Ambient */}
+      <ambientLight intensity={0.45} />
+
+      {/* Hemisphere: sky blue above, earth brown below */}
+      <hemisphereLight args={["#1e78c2", "#5c3d1a", 0.35]} />
+
+      {/* Key directional light from top-left */}
+      <directionalLight
+        position={[-4, 5, 4]}
+        intensity={1.4}
+        color="#d4eeff"
+        castShadow
+      />
+
+      {/* Cyan fill */}
+      <pointLight position={[-4, -3, 4]} intensity={0.7} color="#22e6e2" />
+
+      {/* Rim light (warm orange from behind) */}
+      <pointLight position={[3, -4, -2]} intensity={0.9} color="#ff7a2f" />
+
+      {/* Top frontal highlight */}
+      <pointLight position={[0, 0, 6]} intensity={0.3} color="#39e9ff" />
+
+      <Starfield />
+      <OceanBase />
       <IndiaShape onPinClick={onPinClick} />
+
       <OrbitControls
+        ref={controlsRef}
         enableZoom={true}
         enablePan={false}
-        autoRotate={false}
+        autoRotate={true}
+        autoRotateSpeed={0.6}
         minPolarAngle={Math.PI * 0.25}
         maxPolarAngle={Math.PI * 0.75}
       />
@@ -284,6 +409,7 @@ export default function IndiaMap3D({
         camera={{ position: [0, 0, 8], fov: 50 }}
         style={{ background: "transparent" }}
         gl={{ alpha: true, antialias: true }}
+        shadows
       >
         <SceneContent onPinClick={handlePin} />
       </Canvas>
