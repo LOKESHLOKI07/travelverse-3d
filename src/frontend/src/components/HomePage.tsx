@@ -1,10 +1,22 @@
 import IndiaMap3D from "@/components/IndiaMap3D";
 import SnowTerrain3D from "@/components/SnowTerrain3D";
+import ThreeErrorBoundary from "@/components/ThreeErrorBoundary";
 import { Button } from "@/components/ui/button";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useActor } from "@/hooks/useActor";
+import { useInternetIdentity } from "@/hooks/useInternetIdentity";
+import {
+  ChevronDown,
   Compass,
   Facebook,
   Instagram,
+  LogIn,
+  LogOut,
   Mail,
   MapPin,
   Mountain,
@@ -17,8 +29,7 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import type { ComponentType } from "react";
 import { useEffect, useRef, useState } from "react";
-
-type Page = "home" | "trek-detail";
+import type { Page } from "../types";
 
 interface HomePageProps {
   setPage: (page: Page) => void;
@@ -201,6 +212,20 @@ export default function HomePage({ setPage, openBooking }: HomePageProps) {
   const [showFloatingCTA, setShowFloatingCTA] = useState(false);
   const journeyRef = useRef<HTMLDivElement>(null);
   const [journeyVisible, setJourneyVisible] = useState(false);
+  const { login, clear, identity } = useInternetIdentity();
+  const { actor } = useActor();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!actor || !identity) {
+      setIsAdmin(false);
+      return;
+    }
+    actor
+      .isCallerAdmin()
+      .then(setIsAdmin)
+      .catch(() => setIsAdmin(false));
+  }, [actor, identity]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -268,7 +293,6 @@ export default function HomePage({ setPage, openBooking }: HomePageProps) {
                 ["Journey", "journey"],
                 ["Experience", "experience"],
                 ["About", "about"],
-                ["Book", "book"],
               ] as [string, string][]
             ).map(([label, id]) => (
               <button
@@ -285,28 +309,120 @@ export default function HomePage({ setPage, openBooking }: HomePageProps) {
                 {label}
               </button>
             ))}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  data-ocid="nav.packages.dropdown_menu"
+                  className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Packages <ChevronDown className="w-3.5 h-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                style={{
+                  background: "oklch(0.16 0.025 232)",
+                  border: "1px solid oklch(0.3 0.04 232 / 0.5)",
+                }}
+              >
+                <DropdownMenuItem
+                  data-ocid="nav.private_packages.link"
+                  onClick={() => setPage("private-packages")}
+                  className="cursor-pointer"
+                >
+                  Private Packages
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  data-ocid="nav.fixed_packages.link"
+                  onClick={() => setPage("fixed-packages")}
+                  className="cursor-pointer"
+                >
+                  Fixed Date Packages
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  data-ocid="nav.treks.link"
+                  onClick={() => setPage("treks-expeditions")}
+                  className="cursor-pointer"
+                >
+                  Treks &amp; Expeditions
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  data-ocid="nav.hotels.link"
+                  onClick={() => setPage("hotels")}
+                  className="cursor-pointer"
+                >
+                  Hotels &amp; Villas
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {identity && (
+              <button
+                type="button"
+                data-ocid="nav.mybookings.link"
+                onClick={() => setPage("my-bookings")}
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                My Bookings
+              </button>
+            )}
+            {isAdmin && (
+              <button
+                type="button"
+                data-ocid="nav.admin.link"
+                onClick={() => setPage("admin")}
+                className="text-sm font-medium hover:text-foreground transition-colors"
+                style={{ color: "oklch(0.75 0.14 55)" }}
+              >
+                Admin
+              </button>
+            )}
           </nav>
 
-          <Button
-            data-ocid="nav.primary_button"
-            onClick={() => openBooking("Friendship Peak")}
-            className="pill-btn hidden sm:flex"
-            style={{
-              background: "oklch(0.85 0.13 192)",
-              color: "oklch(0.13 0.04 195)",
-              fontWeight: 700,
-            }}
-          >
-            Book Now
-          </Button>
+          <div className="hidden sm:flex items-center gap-3">
+            {identity ? (
+              <button
+                type="button"
+                data-ocid="nav.logout.button"
+                onClick={() => clear()}
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </button>
+            ) : (
+              <button
+                type="button"
+                data-ocid="nav.login.button"
+                onClick={() => login()}
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <LogIn className="w-4 h-4" />
+                Login
+              </button>
+            )}
+            <Button
+              data-ocid="nav.primary_button"
+              onClick={() => openBooking("Friendship Peak")}
+              className="pill-btn"
+              style={{
+                background: "oklch(0.85 0.13 192)",
+                color: "oklch(0.13 0.04 195)",
+                fontWeight: 700,
+              }}
+            >
+              Book Now
+            </Button>
+          </div>
         </div>
       </header>
 
       {/* HERO — 3D Snow Terrain */}
-      <SnowTerrain3D
-        openBooking={openBooking}
-        scrollToSection={scrollToSection}
-      />
+      <ThreeErrorBoundary>
+        <SnowTerrain3D
+          openBooking={openBooking}
+          scrollToSection={scrollToSection}
+        />
+      </ThreeErrorBoundary>
 
       {/* FEATURED TREKS */}
       <section id="treks" className="py-24">
@@ -829,7 +945,9 @@ export default function HomePage({ setPage, openBooking }: HomePageProps) {
               background: "oklch(0.08 0.02 232)",
             }}
           >
-            <IndiaMap3D />
+            <ThreeErrorBoundary>
+              <IndiaMap3D />
+            </ThreeErrorBoundary>
           </div>
         </div>
       </section>

@@ -345,7 +345,11 @@ function PinMarker({
   );
 }
 
-function SceneContent({ onPinClick }: { onPinClick: (label: string) => void }) {
+function SceneContent({
+  onPinClick,
+}: {
+  onPinClick: (label: string) => void;
+}) {
   const controlsRef = useRef<any>(null);
 
   return (

@@ -10,7 +10,7 @@ import {
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
-type Page = "home" | "trek-detail";
+import type { Page } from "../types";
 
 interface TrekDetailPageProps {
   setPage: (page: Page) => void;

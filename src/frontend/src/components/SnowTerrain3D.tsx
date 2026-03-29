@@ -5,10 +5,10 @@ import { Suspense, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 const TEXTURE_PATHS = [
-  "/assets/uploads/snow07_ao_4k-019d33ef-9fdc-7379-aa83-37f0d9b2ada6-1.jpg",
-  "/assets/uploads/snow07_ao_4k-019d33f0-1f24-757d-ba8f-c118b53b1c5d-2.jpg",
-  "/assets/uploads/snow07_ao_4k-019d33f0-b5cc-701a-b242-f9b6693352fb-3.jpg",
-  "/assets/uploads/snow07_ao_4k-019d33f1-cfcc-7710-8842-2cc2da14ec8a-4.jpg",
+  "/assets/snow07_ao_4k-019d33ef-9fdc-7379-aa83-37f0d9b2ada6.jpg",
+  "/assets/snow07_ao_4k-019d33f0-1f24-757d-ba8f-c118b53b1c5d.jpg",
+  "/assets/snow07_ao_4k-019d33f0-b5cc-701a-b242-f9b6693352fb.jpg",
+  "/assets/snow07_ao_4k-019d33f1-cfcc-7710-8842-2cc2da14ec8a.jpg",
 ];
 
 const STATS: [string, string][] = [
@@ -121,6 +121,7 @@ function SceneContent({ texturePath }: { texturePath: string }) {
         autoRotate
         autoRotateSpeed={0.3}
         enableZoom={false}
+        enablePan={false}
         maxPolarAngle={Math.PI / 2.5}
       />
     </>
