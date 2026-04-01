@@ -1,15 +1,64 @@
-import { OrbitControls, useTexture } from "@react-three/drei";
+import { OrbitControls } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { motion } from "motion/react";
-import { Suspense, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
-const TEXTURE_PATHS = [
-  "/assets/snow07_ao_4k-019d33ef-9fdc-7379-aa83-37f0d9b2ada6.jpg",
-  "/assets/snow07_ao_4k-019d33f0-1f24-757d-ba8f-c118b53b1c5d.jpg",
-  "/assets/snow07_ao_4k-019d33f0-b5cc-701a-b242-f9b6693352fb.jpg",
-  "/assets/snow07_ao_4k-019d33f1-cfcc-7710-8842-2cc2da14ec8a.jpg",
-];
+/** Repo snow JPGs under /assets are often missing or UTF-8–corrupted; use procedural snow instead. */
+function makeSnowCanvasTexture(seed: number): THREE.CanvasTexture {
+  const w = 512;
+  const h = 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("2D context unavailable for snow texture");
+  }
+  const img = ctx.createImageData(w, h);
+  const data = img.data;
+  let rng = seed;
+  const next = () => {
+    rng = (rng * 1103515245 + 12345) >>> 0;
+    return rng / 4294967296;
+  };
+  for (let i = 0; i < data.length; i += 4) {
+    const n = 175 + next() * 80;
+    const v = n + (next() - 0.5) * 35;
+    const c = Math.max(120, Math.min(255, v));
+    data[i] = c;
+    data[i + 1] = c + (next() - 0.5) * 12;
+    data[i + 2] = c + 8 + (next() - 0.5) * 10;
+    data[i + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(4, 4);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+const SNOW_TEXTURE_SEEDS = [201, 577, 911, 1201] as const;
+
+/**
+ * Phones + tablets (Tailwind `lg` and below): disable drag-orbit so vertical scroll wins.
+ * Wide screens with mouse: keep manual orbit. Coarse pointer alone can include large touch
+ * laptops — we only use max-width to avoid disabling orbit on small desktop windows.
+ */
+function useHeroScrollFriendlyLayout(): boolean {
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1024px)");
+    const sync = () => setNarrow(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  return narrow;
+}
 
 const STATS: [string, string][] = [
   ["50+", "Treks"],
@@ -17,16 +66,7 @@ const STATS: [string, string][] = [
   ["4.9★", "Rating"],
 ];
 
-function SnowTerrain({ texturePath }: { texturePath: string }) {
-  const texture = useTexture(texturePath);
-
-  useMemo(() => {
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(4, 4);
-    texture.needsUpdate = true;
-  }, [texture]);
-
+function SnowTerrain({ texture }: { texture: THREE.CanvasTexture }) {
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, 0]}>
       <planeGeometry args={[40, 40, 200, 200]} />
@@ -34,9 +74,9 @@ function SnowTerrain({ texturePath }: { texturePath: string }) {
         map={texture}
         aoMap={texture}
         displacementMap={texture}
-        displacementScale={1.5}
-        color="#ffffff"
-        roughness={0.9}
+        displacementScale={1.2}
+        color="#f4f8ff"
+        roughness={0.92}
         metalness={0.0}
       />
     </mesh>
@@ -97,7 +137,13 @@ function CameraSetup() {
   return null;
 }
 
-function SceneContent({ texturePath }: { texturePath: string }) {
+function SceneContent({
+  texture,
+  enableManualRotate,
+}: {
+  texture: THREE.CanvasTexture;
+  enableManualRotate: boolean;
+}) {
   return (
     <>
       <CameraSetup />
@@ -112,7 +158,7 @@ function SceneContent({ texturePath }: { texturePath: string }) {
       <pointLight position={[0, 5, 0]} intensity={1.5} color="#4488ff" />
 
       <Suspense fallback={null}>
-        <SnowTerrain texturePath={texturePath} />
+        <SnowTerrain texture={texture} />
       </Suspense>
 
       <SnowParticles />
@@ -122,6 +168,7 @@ function SceneContent({ texturePath }: { texturePath: string }) {
         autoRotateSpeed={0.3}
         enableZoom={false}
         enablePan={false}
+        enableRotate={enableManualRotate}
         maxPolarAngle={Math.PI / 2.5}
       />
     </>
@@ -138,6 +185,21 @@ export default function SnowTerrain3D({
   scrollToSection,
 }: SnowTerrain3DProps) {
   const [activeTexture, setActiveTexture] = useState(0);
+  const heroScrollFriendly = useHeroScrollFriendlyLayout();
+
+  const snowTextures = useMemo(() => {
+    return SNOW_TEXTURE_SEEDS.map((s) => makeSnowCanvasTexture(s));
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      for (const t of snowTextures) {
+        t.dispose();
+      }
+    };
+  }, [snowTextures]);
+
+  const activeSnow = snowTextures[activeTexture] ?? snowTextures[0];
 
   return (
     <section
@@ -149,14 +211,20 @@ export default function SnowTerrain3D({
         background: "#050a18",
       }}
     >
-      {/* 3D Canvas */}
-      <div className="absolute inset-0">
+      {/* 3D Canvas — ≤1024px: pan-y + no drag-orbit so the page scrolls; autoRotate still runs */}
+      <div
+        className="absolute inset-0"
+        style={heroScrollFriendly ? { touchAction: "pan-y" } : undefined}
+      >
         <Canvas
           camera={{ position: [0, 8, 18], fov: 55 }}
           style={{ background: "#050a18" }}
           gl={{ antialias: true }}
         >
-          <SceneContent texturePath={TEXTURE_PATHS[activeTexture]} />
+          <SceneContent
+            texture={activeSnow}
+            enableManualRotate={!heroScrollFriendly}
+          />
         </Canvas>
       </div>
 
@@ -298,9 +366,9 @@ export default function SnowTerrain3D({
         <span className="text-white/40 text-xs font-medium tracking-widest uppercase mr-1">
           Surface
         </span>
-        {TEXTURE_PATHS.map((path, i) => (
+        {SNOW_TEXTURE_SEEDS.map((seed, i) => (
           <button
-            key={path}
+            key={seed}
             type="button"
             data-ocid={`hero.toggle.${i + 1}`}
             onClick={() => setActiveTexture(i)}
@@ -318,13 +386,16 @@ export default function SnowTerrain3D({
                   : "none",
               background: "#0a0f1e",
             }}
-            title={`Snow texture ${i + 1}`}
+            title={`Snow surface ${i + 1}`}
           >
-            <img
-              src={path}
-              alt={`Snow texture ${i + 1}`}
-              className="w-full h-full object-cover"
-              style={{ filter: "brightness(1.2) contrast(1.1)" }}
+            <span
+              className="block w-full h-full"
+              style={{
+                background:
+                  "linear-gradient(135deg, oklch(0.95 0.02 240), oklch(0.82 0.04 230))",
+                opacity: 0.85,
+              }}
+              aria-hidden
             />
             {activeTexture === i && (
               <div

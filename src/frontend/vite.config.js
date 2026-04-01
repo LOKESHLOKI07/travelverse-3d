@@ -9,8 +9,7 @@ const ii_url =
     : `https://identity.internetcomputer.org/`;
 
 process.env.II_URL = process.env.II_URL || ii_url;
-process.env.STORAGE_GATEWAY_URL =
-  process.env.STORAGE_GATEWAY_URL || "https://blob.caffeine.ai";
+process.env.STORAGE_GATEWAY_URL = process.env.STORAGE_GATEWAY_URL || "";
 
 export default defineConfig({
   logLevel: "error",
@@ -30,6 +29,8 @@ export default defineConfig({
     },
   },
   server: {
+    port: 5007,
+    host: true,
     proxy: {
       "/api": {
         target: "http://127.0.0.1:4943",

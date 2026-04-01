@@ -1,7 +1,7 @@
-## 
+## TravelVerse 3D
 
-This source code has been exported from [Caffeine](https://caffeine.ai/)
+Mountain Explorers travel experience — frontend and Internet Computer backend.
 
-### Coming Soon
+### Local development
 
-We are working on tools to help you build locally and deploy your apps back to caffeine.
+Use `pnpm` from the repository root. Set `STORAGE_GATEWAY_URL` when you need blob storage (see `deploy.sh` for a local example).

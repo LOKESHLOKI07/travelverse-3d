@@ -9,6 +9,18 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
+import { LOGO_URL } from "@/branding";
+import experienceAbove from "@/assets/generated/experience-above-clouds.dim_800x500.jpg";
+import experienceSnow from "@/assets/generated/experience-snow-training.dim_800x500.jpg";
+import experienceSummit from "@/assets/generated/experience-summit-sunrise.dim_800x500.jpg";
+import friendshipPeakHero from "@/assets/generated/friendship-peak-hero.dim_1920x600.jpg";
+import heroMountains from "@/assets/generated/hero-mountains.dim_1920x1080.jpg";
+import mountainIsometric from "@/assets/generated/mountain-isometric-3d-transparent.dim_800x600.png";
+import {
+  logDevBundledImages,
+  logLogoDevContext,
+  logoImgDevHandlers,
+} from "@/utils/devDebug";
 
 import type { Page } from "../types";
 
@@ -79,12 +91,12 @@ const EXCLUSIONS = [
 ];
 
 const GALLERY_IMAGES = [
-  "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&fit=crop",
-  "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&fit=crop",
-  "https://images.unsplash.com/photo-1551632811-561732d1e306?w=600&fit=crop",
-  "https://images.unsplash.com/photo-1619468129361-605ebea04b44?w=600&fit=crop",
-  "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=600&fit=crop",
-  "https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=600&fit=crop",
+  friendshipPeakHero,
+  heroMountains,
+  experienceSummit,
+  experienceAbove,
+  experienceSnow,
+  mountainIsometric,
 ];
 
 const GALLERY_ALTS = [
@@ -151,6 +163,19 @@ export default function TrekDetailPage({
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    logLogoDevContext(LOGO_URL);
+    logDevBundledImages({
+      logoMountain: LOGO_URL,
+      friendshipPeakHero,
+      heroMountains,
+      experienceSummit,
+      experienceAbove,
+      experienceSnow,
+      mountainIsometric,
+    });
+  }, []);
+
   return (
     <div className="min-h-screen">
       {/* BACK BUTTON */}
@@ -175,7 +200,7 @@ export default function TrekDetailPage({
       {/* HERO */}
       <section className="relative" style={{ height: "70vh" }}>
         <img
-          src="/assets/generated/friendship-peak-hero.dim_1920x600.jpg"
+          src={friendshipPeakHero}
           alt="Friendship Peak Himalayan Expedition"
           className="w-full h-full object-cover"
         />
@@ -424,15 +449,15 @@ export default function TrekDetailPage({
                 {[
                   {
                     label: "Above the Clouds",
-                    img: "/assets/generated/experience-above-clouds.dim_800x500.jpg",
+                    img: experienceAbove,
                   },
                   {
                     label: "Snow Training",
-                    img: "/assets/generated/experience-snow-training.dim_800x500.jpg",
+                    img: experienceSnow,
                   },
                   {
                     label: "Summit Sunrise",
-                    img: "/assets/generated/experience-summit-sunrise.dim_800x500.jpg",
+                    img: experienceSummit,
                   },
                 ].map((exp) => (
                   <div
@@ -769,8 +794,9 @@ export default function TrekDetailPage({
         <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <img
-              src="/assets/generated/mountain-explorers-logo-transparent.dim_300x300.png"
+              src={LOGO_URL}
               alt="Mountain Explorers"
+              {...(logoImgDevHandlers() ?? {})}
               className="w-8 h-8 rounded-full object-cover"
             />
             <span className="font-display font-bold text-sm text-foreground">
@@ -778,16 +804,8 @@ export default function TrekDetailPage({
             </span>
           </div>
           <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} Mountain Explorers India. Built with ❤️
-            using{" "}
-            <a
-              href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
-              className="text-cyan hover:underline"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              caffeine.ai
-            </a>
+            © {new Date().getFullYear()} Mountain Explorers India. Built with care
+            for trekkers.
           </p>
         </div>
       </footer>

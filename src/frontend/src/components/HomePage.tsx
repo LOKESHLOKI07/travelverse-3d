@@ -1,4 +1,3 @@
-import IndiaMap3D from "@/components/IndiaMap3D";
 import SnowTerrain3D from "@/components/SnowTerrain3D";
 import ThreeErrorBoundary from "@/components/ThreeErrorBoundary";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { useActor } from "@/hooks/useActor";
 import { useInternetIdentity } from "@/hooks/useInternetIdentity";
 import {
@@ -18,6 +29,7 @@ import {
   LogIn,
   LogOut,
   Mail,
+  Menu,
   MapPin,
   Mountain,
   Phone,
@@ -29,6 +41,13 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import type { ComponentType } from "react";
 import { useEffect, useRef, useState } from "react";
+import { LOGO_URL } from "@/branding";
+import heroMountains from "@/assets/generated/hero-mountains.dim_1920x1080.jpg";
+import {
+  logDevBundledImages,
+  logLogoDevContext,
+  logoImgDevHandlers,
+} from "@/utils/devDebug";
 import type { Page } from "../types";
 
 interface HomePageProps {
@@ -207,9 +226,18 @@ const SOCIAL_LINKS: {
   { icon: Youtube, href: "https://youtube.com", label: "YouTube" },
 ];
 
+const HOME_HEADER_SECTION_LINKS: [string, string][] = [
+  ["Home", ""],
+  ["Treks", "treks"],
+  ["Journey", "journey"],
+  ["Experience", "experience"],
+  ["About", "about"],
+];
+
 export default function HomePage({ setPage, openBooking }: HomePageProps) {
   const [scrollY, setScrollY] = useState(0);
   const [showFloatingCTA, setShowFloatingCTA] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const journeyRef = useRef<HTMLDivElement>(null);
   const [journeyVisible, setJourneyVisible] = useState(false);
   const { login, clear, identity } = useInternetIdentity();
@@ -247,9 +275,16 @@ export default function HomePage({ setPage, openBooking }: HomePageProps) {
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    logLogoDevContext(LOGO_URL);
+    logDevBundledImages({ logoMountain: LOGO_URL, heroMountains });
+  }, []);
+
   const scrollToSection = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   };
+
+  const closeMobileNav = () => setMobileNavOpen(false);
 
   return (
     <div className="min-h-screen overflow-x-hidden">
@@ -276,9 +311,10 @@ export default function HomePage({ setPage, openBooking }: HomePageProps) {
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
           >
             <img
-              src="/assets/generated/mountain-explorers-logo-transparent.dim_300x300.png"
+              src={LOGO_URL}
               alt="Mountain Explorers"
               className="w-10 h-10 rounded-full object-cover"
+              {...(logoImgDevHandlers() ?? {})}
             />
             <span className="font-display font-bold text-lg tracking-tight text-foreground">
               MOUNTAIN <span className="text-cyan">EXPLORERS</span>
@@ -286,15 +322,7 @@ export default function HomePage({ setPage, openBooking }: HomePageProps) {
           </button>
 
           <nav className="hidden lg:flex items-center gap-6">
-            {(
-              [
-                ["Home", ""],
-                ["Treks", "treks"],
-                ["Journey", "journey"],
-                ["Experience", "experience"],
-                ["About", "about"],
-              ] as [string, string][]
-            ).map(([label, id]) => (
+            {HOME_HEADER_SECTION_LINKS.map(([label, id]) => (
               <button
                 key={label}
                 type="button"
@@ -378,40 +406,226 @@ export default function HomePage({ setPage, openBooking }: HomePageProps) {
             )}
           </nav>
 
-          <div className="hidden sm:flex items-center gap-3">
-            {identity ? (
-              <button
-                type="button"
-                data-ocid="nav.logout.button"
-                onClick={() => clear()}
-                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <div className="hidden sm:flex items-center gap-3">
+              {identity ? (
+                <button
+                  type="button"
+                  data-ocid="nav.logout.button"
+                  onClick={() => clear()}
+                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  data-ocid="nav.login.button"
+                  onClick={() => login()}
+                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Login
+                </button>
+              )}
+              <Button
+                data-ocid="nav.primary_button"
+                onClick={() => openBooking("Friendship Peak")}
+                className="pill-btn"
+                style={{
+                  background: "oklch(0.85 0.13 192)",
+                  color: "oklch(0.13 0.04 195)",
+                  fontWeight: 700,
+                }}
               >
-                <LogOut className="w-4 h-4" />
-                Logout
-              </button>
-            ) : (
-              <button
-                type="button"
-                data-ocid="nav.login.button"
-                onClick={() => login()}
-                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <LogIn className="w-4 h-4" />
-                Login
-              </button>
-            )}
-            <Button
-              data-ocid="nav.primary_button"
-              onClick={() => openBooking("Friendship Peak")}
-              className="pill-btn"
-              style={{
-                background: "oklch(0.85 0.13 192)",
-                color: "oklch(0.13 0.04 195)",
-                fontWeight: 700,
-              }}
+                Book Now
+              </Button>
+            </div>
+
+            <button
+              type="button"
+              className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-md text-foreground hover:bg-foreground/10 transition-colors"
+              aria-label="Open menu"
+              data-ocid="nav.mobile_menu.open"
+              onClick={() => setMobileNavOpen(true)}
             >
-              Book Now
-            </Button>
+              <Menu className="h-5 w-5" />
+            </button>
+            <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+              <SheetContent
+                side="right"
+                className="flex h-full w-[min(100%,20rem)] flex-col gap-0 border-l border-[oklch(0.3_0.04_232/0.5)] bg-[oklch(0.11_0.025_232)] p-0 [&>button]:text-foreground"
+              >
+                <SheetHeader className="border-b border-[oklch(0.3_0.04_232/0.35)] px-6 py-4 text-left">
+                  <SheetTitle className="font-display text-lg">
+                    Menu
+                  </SheetTitle>
+                  <SheetDescription className="sr-only">
+                    Site navigation and account actions
+                  </SheetDescription>
+                </SheetHeader>
+                <nav
+                  className="flex flex-col px-4 py-2"
+                  aria-label="Mobile navigation"
+                >
+                  {HOME_HEADER_SECTION_LINKS.map(([label, id]) => (
+                    <button
+                      key={label}
+                      type="button"
+                      data-ocid="nav.mobile.link"
+                      onClick={() => {
+                        closeMobileNav();
+                        if (id) scrollToSection(id);
+                        else window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-foreground/5 hover:text-foreground transition-colors"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                  <Collapsible className="py-0.5">
+                    <CollapsibleTrigger
+                      type="button"
+                      data-ocid="nav.mobile.packages.trigger"
+                      className="group flex w-full items-center justify-between rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground data-[state=open]:bg-foreground/5 data-[state=open]:text-foreground"
+                    >
+                      <span className="flex items-center gap-1">
+                        Packages
+                        <ChevronDown className="size-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                      </span>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="overflow-hidden">
+                      <div
+                        className="ml-3 mt-0.5 space-y-0.5 border-l border-[oklch(0.35_0.03_232/0.45)] pl-3 pb-1"
+                        style={{
+                          background:
+                            "linear-gradient(90deg, oklch(0.14 0.02 232 / 0.5) 0%, transparent 100%)",
+                        }}
+                      >
+                        <button
+                          type="button"
+                          data-ocid="nav.mobile.private_packages"
+                          onClick={() => {
+                            closeMobileNav();
+                            setPage("private-packages");
+                          }}
+                          className="w-full rounded-md px-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-foreground/5 hover:text-foreground transition-colors"
+                        >
+                          Private Packages
+                        </button>
+                        <button
+                          type="button"
+                          data-ocid="nav.mobile.fixed_packages"
+                          onClick={() => {
+                            closeMobileNav();
+                            setPage("fixed-packages");
+                          }}
+                          className="w-full rounded-md px-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-foreground/5 hover:text-foreground transition-colors"
+                        >
+                          Fixed Date Packages
+                        </button>
+                        <button
+                          type="button"
+                          data-ocid="nav.mobile.treks_expeditions"
+                          onClick={() => {
+                            closeMobileNav();
+                            setPage("treks-expeditions");
+                          }}
+                          className="w-full rounded-md px-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-foreground/5 hover:text-foreground transition-colors"
+                        >
+                          Treks &amp; Expeditions
+                        </button>
+                        <button
+                          type="button"
+                          data-ocid="nav.mobile.hotels"
+                          onClick={() => {
+                            closeMobileNav();
+                            setPage("hotels");
+                          }}
+                          className="w-full rounded-md px-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-foreground/5 hover:text-foreground transition-colors"
+                        >
+                          Hotels &amp; Villas
+                        </button>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                  {identity && (
+                    <button
+                      type="button"
+                      data-ocid="nav.mobile.mybookings"
+                      onClick={() => {
+                        closeMobileNav();
+                        setPage("my-bookings");
+                      }}
+                      className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-foreground/5 hover:text-foreground transition-colors"
+                    >
+                      My Bookings
+                    </button>
+                  )}
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      data-ocid="nav.mobile.admin"
+                      onClick={() => {
+                        closeMobileNav();
+                        setPage("admin");
+                      }}
+                      className="w-full rounded-md px-3 py-3 text-left text-base font-medium transition-colors hover:bg-foreground/5"
+                      style={{ color: "oklch(0.75 0.14 55)" }}
+                    >
+                      Admin
+                    </button>
+                  )}
+                </nav>
+                <div className="mt-auto flex flex-col gap-3 border-t border-[oklch(0.3_0.04_232/0.35)] px-4 py-4 sm:hidden">
+                  {identity ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      data-ocid="nav.mobile.logout"
+                      onClick={() => {
+                        closeMobileNav();
+                        clear();
+                      }}
+                      className="w-full justify-center gap-2"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Logout
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      data-ocid="nav.mobile.login"
+                      onClick={() => {
+                        closeMobileNav();
+                        login();
+                      }}
+                      className="w-full justify-center gap-2"
+                    >
+                      <LogIn className="w-4 h-4" />
+                      Login
+                    </Button>
+                  )}
+                  <Button
+                    data-ocid="nav.mobile.primary_button"
+                    onClick={() => {
+                      closeMobileNav();
+                      openBooking("Friendship Peak");
+                    }}
+                    className="pill-btn w-full"
+                    style={{
+                      background: "oklch(0.85 0.13 192)",
+                      color: "oklch(0.13 0.04 195)",
+                      fontWeight: 700,
+                    }}
+                  >
+                    Book Now
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
       </header>
@@ -919,39 +1133,6 @@ export default function HomePage({ setPage, openBooking }: HomePageProps) {
         </div>
       </section>
 
-      {/* EXPLORE INDIA MAP */}
-      <section id="map" className="py-24">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <p className="text-cyan text-xs font-bold tracking-[0.3em] uppercase mb-3">
-              OUR DESTINATIONS
-            </p>
-            <h2
-              className="font-display font-extrabold text-foreground"
-              style={{ fontSize: "clamp(32px, 4vw, 54px)" }}
-            >
-              Explore India in 3D
-            </h2>
-            <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
-              Click any glowing pin to discover our trek destinations across
-              India. Drag to rotate, scroll to zoom.
-            </p>
-          </div>
-          <div
-            className="rounded-3xl overflow-hidden"
-            style={{
-              height: "550px",
-              border: "1px solid oklch(0.85 0.13 192 / 0.15)",
-              background: "oklch(0.08 0.02 232)",
-            }}
-          >
-            <ThreeErrorBoundary>
-              <IndiaMap3D />
-            </ThreeErrorBoundary>
-          </div>
-        </div>
-      </section>
-
       {/* BOOKING PREVIEW */}
       <section id="book" className="py-24">
         <div className="max-w-7xl mx-auto px-6">
@@ -976,7 +1157,7 @@ export default function HomePage({ setPage, openBooking }: HomePageProps) {
           <div className="relative flex justify-center">
             <div className="absolute -top-16 right-1/4 w-48 h-48 opacity-20 animate-float hidden lg:block pointer-events-none">
               <img
-                src="/assets/generated/mountain-isometric-3d-transparent.dim_800x600.png"
+                src={heroMountains}
                 alt=""
                 aria-hidden="true"
                 className="w-full h-full object-contain"
@@ -1085,9 +1266,10 @@ export default function HomePage({ setPage, openBooking }: HomePageProps) {
             <div className="lg:col-span-1">
               <div className="flex items-center gap-2 mb-4">
                 <img
-                  src="/assets/generated/mountain-explorers-logo-transparent.dim_300x300.png"
+                  src={LOGO_URL}
                   alt="Mountain Explorers"
                   className="w-9 h-9 rounded-full object-cover"
+                  {...(logoImgDevHandlers() ?? {})}
                 />
                 <span className="font-display font-bold text-sm text-foreground">
                   MOUNTAIN <span className="text-cyan">EXPLORERS</span>
@@ -1158,17 +1340,7 @@ export default function HomePage({ setPage, openBooking }: HomePageProps) {
               © {new Date().getFullYear()} Mountain Explorers India. All rights
               reserved.
             </span>
-            <span>
-              Built with ❤️ using{" "}
-              <a
-                href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
-                className="text-cyan hover:underline"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                caffeine.ai
-              </a>
-            </span>
+            <span>Built with care for trekkers.</span>
           </div>
         </div>
       </footer>

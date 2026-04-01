@@ -1,9 +1,12 @@
 {
-  "name": "@caffeine/template-frontend",
+  "name": "travelverse-3d-frontend",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predev": "node ../../scripts/sync-frontend-public-assets.js",
+    "dev": "vite",
+    "postbuild": "node ../../scripts/sync-frontend-public-assets.js",
     "build:skip-bindings": "vite build && pnpm copy:env",
     "build": "vite build && pnpm copy:env",
     "copy:env": "cp env.json dist/",

@@ -2,7 +2,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { InternetIdentityProvider } from "./hooks/useInternetIdentity";
+import { installDevDebug } from "./utils/devDebug";
 import "./index.css";
+
+installDevDebug();
 
 BigInt.prototype.toJSON = function () {
   return this.toString();

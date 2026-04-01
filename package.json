@@ -1,5 +1,5 @@
 {
-  "name": "@caffeine/template-app",
+  "name": "travelverse-3d",
   "type": "module",
   "engines": {
     "node": ">=16.0.0",
@@ -7,10 +7,15 @@
     "npm": "please use pnpm"
   },
   "scripts": {
-    "build": "pnpm -r --if-present run build",
-    "typecheck": "pnpm -r --if-present run typecheck",
-    "check": "pnpm -r --if-present run check",
-    "fix": "pnpm -r --if-present run fix"
+    "dev": "npx --yes pnpm@9 --filter travelverse-3d-frontend run dev",
+    "server": "npx --yes pnpm@9 --filter travelverse-3d-frontend run dev",
+    "sync-assets": "node scripts/sync-frontend-public-assets.js",
+    "fonts:decode": "node scripts/decode-base64-fonts.js",
+    "images:decode": "node scripts/decode-base64-images.js",
+    "build": "npx --yes pnpm@9 -r --if-present run build",
+    "typecheck": "npx --yes pnpm@9 -r --if-present run typecheck",
+    "check": "npx --yes pnpm@9 -r --if-present run check",
+    "fix": "npx --yes pnpm@9 -r --if-present run fix"
   },
   "devDependencies": {
     "sharp": "^0.34.4"

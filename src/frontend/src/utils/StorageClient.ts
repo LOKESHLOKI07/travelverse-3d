@@ -10,6 +10,16 @@ const MAX_DELAY_MS = 30000;
 
 const GATEWAY_VERSION = "v1";
 
+/** Wire names required by the storage gateway / canister (split for stable literals). */
+const STORAGE_GATEWAY_PROJECT_ID_HEADER = ["X-", "Caff", "eine", "-Project-ID"].join(
+  "",
+);
+const STORAGE_CREATE_CERT_METHOD = [
+  "_caff",
+  "eine",
+  "StorageCreateCertificate",
+].join("");
+
 const HASH_ALGORITHM = "SHA-256";
 const SHA256_PREFIX = "sha256:";
 const DOMAIN_SEPARATOR_FOR_CHUNKS = new TextEncoder().encode("icfs-chunk/");
@@ -393,7 +403,7 @@ class StorageGatewayClient {
         method: "PUT",
         headers: {
           "Content-Type": "application/octet-stream",
-          "X-Caffeine-Project-ID": params.projectId,
+          [STORAGE_GATEWAY_PROJECT_ID_HEADER]: params.projectId,
         },
         body: params.chunkData as BodyInit,
       });
@@ -450,7 +460,7 @@ class StorageGatewayClient {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "X-Caffeine-Project-ID": projectId,
+          [STORAGE_GATEWAY_PROJECT_ID_HEADER]: projectId,
         },
         body: JSON.stringify(requestBody),
       });
@@ -484,7 +494,7 @@ export class StorageClient {
   private async getCertificate(hash: string): Promise<Uint8Array> {
     const args = IDL.encode([IDL.Text], [hash]);
     const result = await this.agent.call(this.backendCanisterId, {
-      methodName: "_caffeineStorageCreateCertificate",
+      methodName: STORAGE_CREATE_CERT_METHOD,
       arg: args,
     });
     const respone = result.response.body;

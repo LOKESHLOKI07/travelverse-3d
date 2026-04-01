@@ -5,11 +5,16 @@ import {
   ExternalBlob,
 } from "./backend";
 import { StorageClient } from "./utils/StorageClient";
+import { logDevConfigLoaded } from "./utils/devDebug";
 import { HttpAgent } from "@icp-sdk/core/agent";
 
-const DEFAULT_STORAGE_GATEWAY_URL = "https://blob.caffeine.ai";
+/** Set `STORAGE_GATEWAY_URL` when using remote blob storage. */
+const DEFAULT_STORAGE_GATEWAY_URL = "";
 const DEFAULT_BUCKET_NAME = "default-bucket";
 const DEFAULT_PROJECT_ID = "0000000-0000-0000-0000-00000000000";
+
+/** Valid-shaped principal for local UI when no canister is deployed (replace for real ICP). */
+const DEV_FALLBACK_BACKEND_CANISTER = "rrkah-fqaaa-aaaaa-aaaaq-cai";
 
 interface JsonConfig {
   backend_host: string;
@@ -38,18 +43,32 @@ export async function loadConfig(): Promise<Config> {
   const baseUrl = envBaseUrl.endsWith("/") ? envBaseUrl : `${envBaseUrl}/`;
   try {
     const response = await fetch(`${baseUrl}env.json`);
+    if (!response.ok) {
+      throw new Error(`env.json HTTP ${response.status}`);
+    }
     const config = (await response.json()) as JsonConfig;
-    if (!backendCanisterId && config.backend_canister_id === "undefined") {
+
+    const fromJson =
+      config.backend_canister_id === "undefined"
+        ? undefined
+        : config.backend_canister_id;
+    const resolvedCanister =
+      backendCanisterId ?? fromJson ?? (import.meta.env.DEV ? DEV_FALLBACK_BACKEND_CANISTER : undefined);
+
+    if (!resolvedCanister) {
       console.error("CANISTER_ID_BACKEND is not set");
       throw new Error("CANISTER_ID_BACKEND is not set");
+    }
+    if (import.meta.env.DEV && !backendCanisterId && !fromJson) {
+      console.warn(
+        `[dev] No backend canister configured; using placeholder ${DEV_FALLBACK_BACKEND_CANISTER}. Set CANISTER_ID_BACKEND or public/env.json for a real deployment.`,
+      );
     }
 
     const fullConfig = {
       backend_host:
         config.backend_host === "undefined" ? undefined : config.backend_host,
-      backend_canister_id: (config.backend_canister_id === "undefined"
-        ? backendCanisterId
-        : config.backend_canister_id) as string,
+      backend_canister_id: resolvedCanister,
       storage_gateway_url: process.env.STORAGE_GATEWAY_URL ?? "nogateway",
       bucket_name: DEFAULT_BUCKET_NAME,
       project_id:
@@ -62,20 +81,30 @@ export async function loadConfig(): Promise<Config> {
           : config.ii_derivation_origin,
     };
     configCache = fullConfig;
+    logDevConfigLoaded(fullConfig);
     return fullConfig;
   } catch {
-    if (!backendCanisterId) {
+    const resolved =
+      backendCanisterId ??
+      (import.meta.env.DEV ? DEV_FALLBACK_BACKEND_CANISTER : undefined);
+    if (!resolved) {
       console.error("CANISTER_ID_BACKEND is not set");
       throw new Error("CANISTER_ID_BACKEND is not set");
     }
+    if (import.meta.env.DEV && !backendCanisterId) {
+      console.warn(
+        `[dev] env.json missing or invalid; using placeholder ${DEV_FALLBACK_BACKEND_CANISTER}.`,
+      );
+    }
     const fallbackConfig = {
       backend_host: undefined,
-      backend_canister_id: backendCanisterId,
+      backend_canister_id: resolved,
       storage_gateway_url: DEFAULT_STORAGE_GATEWAY_URL,
       bucket_name: DEFAULT_BUCKET_NAME,
       project_id: DEFAULT_PROJECT_ID,
       ii_derivation_origin: undefined,
     };
+    logDevConfigLoaded(fallbackConfig);
     return fallbackConfig;
   }
 }
