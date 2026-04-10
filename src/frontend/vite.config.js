@@ -8,9 +8,6 @@ const ii_url =
     ? `http://rdmx6-jaaaa-aaaaa-aaadq-cai.localhost:8081/`
     : `https://identity.internetcomputer.org/`;
 
-process.env.II_URL = process.env.II_URL || ii_url;
-process.env.STORAGE_GATEWAY_URL = process.env.STORAGE_GATEWAY_URL || "";
-
 export default defineConfig({
   logLevel: "error",
   build: {
@@ -59,11 +56,15 @@ export default defineConfig({
   plugins: [
     environment("all", { prefix: "CANISTER_" }),
     environment("all", { prefix: "DFX_" }),
-    environment(["II_URL"]),
-    environment(["STORAGE_GATEWAY_URL"]),
-    environment(["VITE_USE_NODE_BACKEND"]),
-    environment(["VITE_NODE_API_BASE_URL"]),
-    environment(["VITE_APP_ADMIN_TOKEN"]),
+    // Object + null defaults: CI (e.g. Vercel) may omit VITE_* until you set them there.
+    // null = optional; real values still win when present in process.env / .env.
+    environment({
+      II_URL: process.env.II_URL ?? ii_url,
+      STORAGE_GATEWAY_URL: process.env.STORAGE_GATEWAY_URL ?? "",
+      VITE_USE_NODE_BACKEND: null,
+      VITE_NODE_API_BASE_URL: null,
+      VITE_APP_ADMIN_TOKEN: null,
+    }),
     react(),
   ],
   resolve: {
