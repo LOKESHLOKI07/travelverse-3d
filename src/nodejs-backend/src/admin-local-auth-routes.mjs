@@ -101,8 +101,15 @@ export function attachAdminLocalAuthRoutes(app, ctx) {
       }
       registrationOtpRateMs.set(email, now);
 
-      await sendRegistrationOtpEmail(email, otp);
-      res.json({ ok: true, message: "Verification code sent" });
+      const mailResult = await sendRegistrationOtpEmail(email, otp);
+      const body = { ok: true, message: "Verification code sent" };
+      if (
+        process.env.TOURIST_DEV_OTP_IN_RESPONSE?.trim() === "1" &&
+        mailResult.devMode
+      ) {
+        body.devOtp = otp;
+      }
+      res.json(body);
     } catch (e) {
       console.error("[tourist-node-api] send-registration-otp:", e);
       res.status(500).json({ error: String(e.message || e) });

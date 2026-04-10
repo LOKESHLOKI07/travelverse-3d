@@ -98,8 +98,15 @@ export function attachUserLocalAuthRoutes(app, ctx) {
       }
       userRegistrationOtpRateMs.set(email, now);
 
-      await sendRegistrationOtpEmail(email, otp, "user");
-      res.json({ ok: true, message: "Verification code sent" });
+      const mailResult = await sendRegistrationOtpEmail(email, otp, "user");
+      const body = { ok: true, message: "Verification code sent" };
+      if (
+        process.env.TOURIST_DEV_OTP_IN_RESPONSE?.trim() === "1" &&
+        mailResult.devMode
+      ) {
+        body.devOtp = otp;
+      }
+      res.json(body);
     } catch (e) {
       console.error("[tourist-node-api] user-auth/send-registration-otp:", e);
       res.status(500).json({ error: String(e.message || e) });

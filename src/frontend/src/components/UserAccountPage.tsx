@@ -119,13 +119,24 @@ export default function UserAccountPage({ setPage }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        devOtp?: string;
+      };
       if (!res.ok) {
         toast.error(data.error || "Could not send code");
         return;
       }
       setRegOtpSent(true);
-      toast.success("Check your email for a 6-digit code");
+      if (data.devOtp) {
+        console.warn(
+          "[tourist user] OTP (dev only, no SMTP — remove TOURIST_DEV_OTP_IN_RESPONSE in production):",
+          data.devOtp,
+        );
+        toast.success("Code in browser console (F12 → Console)");
+      } else {
+        toast.success("Check your email for a 6-digit code");
+      }
     } catch {
       toast.error("Network error");
     } finally {
