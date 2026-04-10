@@ -675,7 +675,7 @@ async function bootstrap() {
       ? "PostgreSQL persistence enabled"
       : "in-memory only (set DB_HOST+DB_NAME or DATABASE_URL for Postgres)";
     console.log(
-      `tourist-node-api listening on http://127.0.0.1:${PORT} — ${tokenHint} — ${dbHint}`,
+      `tourist-node-api listening on port ${PORT} (all interfaces) — ${tokenHint} — ${dbHint}`,
     );
   });
 

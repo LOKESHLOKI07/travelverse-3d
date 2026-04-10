@@ -2,9 +2,7 @@
   "name": "travelverse-3d",
   "type": "module",
   "engines": {
-    "node": ">=16.0.0",
-    "pnpm": ">=7.0.0",
-    "npm": "please use pnpm"
+    "node": ">=16.0.0"
   },
   "scripts": {
     "start": "node src/nodejs-backend/src/index.mjs",
