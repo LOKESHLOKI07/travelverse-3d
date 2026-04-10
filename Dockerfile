@@ -106,21 +106,21 @@ SOURCE_SUB_FOLDER="motoko-core-${CORE_LIB_VERSION}/src"
 curl -L "$CORE_LIB_URL" | tar -xz --strip-components=2 -C "$CORE_LIB_INSTALL_DIR" "$SOURCE_SUB_FOLDER"
 EOF
 
-# Install Motoko base library
+# Install Motoko base library (tag must match MOTOKO_VERSION / motoko-core above)
 RUN <<EOF
 set -e
-BASE_LIB_VERSION=SKIP
+BASE_LIB_VERSION=moc-1.2.0
 BASE_LIB_INSTALL_DIR="$HOME/.motoko/base/$BASE_LIB_VERSION"
 mkdir -p "$BASE_LIB_INSTALL_DIR"
-BASE_LIB_URL="https://github.com/caffeinelabs/motoko-base/archive/refs/tags/moc-${BASE_LIB_VERSION}.tar.gz"
-SOURCE_SUB_FOLDER="motoko-base-moc-${BASE_LIB_VERSION}/src"
+BASE_LIB_URL="https://github.com/caffeinelabs/motoko-base/archive/refs/tags/${BASE_LIB_VERSION}.tar.gz"
+SOURCE_SUB_FOLDER="motoko-base-${BASE_LIB_VERSION}/src"
 curl -L "$BASE_LIB_URL" | tar -xz --strip-components=2 -C "$BASE_LIB_INSTALL_DIR" "$SOURCE_SUB_FOLDER"
 EOF
 
 # Set Motoko environment variables for deploy.sh and other scripts
 ENV MOC_PATH="/home/ubuntu/.motoko/moc/1.2.0/bin/moc"
 ENV MOTOKO_CORE="/home/ubuntu/.motoko/core/moc-1.2.0"
-ENV MOTOKO_BASE="/home/ubuntu/.motoko/base/SKIP"
+ENV MOTOKO_BASE="/home/ubuntu/.motoko/base/moc-1.2.0"
 
 WORKDIR /workdir
 
