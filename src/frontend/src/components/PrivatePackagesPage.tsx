@@ -13,8 +13,13 @@ import { Slider } from "@/components/ui/slider";
 import { useActor } from "@/hooks/useActor";
 import { ArrowLeft, Loader2, Mountain, Users } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import type { PrivateCfg, TourPackage } from "../backend";
+import {
+  packageForPrivatePage,
+  type TourPackageListing,
+} from "../utils/catalogListing";
 import type { Page } from "../types";
 
 interface Props {
@@ -85,8 +90,22 @@ function getPricePerPerson(tierIndex: number, groupSize: number): number {
   return prices[3];
 }
 
+const TIER_COLOR_CYCLE = [
+  "oklch(0.65 0.12 192)",
+  "oklch(0.75 0.14 55)",
+  "oklch(0.72 0.18 320)",
+];
+
+function privateCfgOf(p: TourPackage): PrivateCfg {
+  if (!("private" in p.detail)) {
+    throw new Error("Expected private package");
+  }
+  return p.detail.private;
+}
+
 export default function PrivatePackagesPage({ setPage }: Props) {
   const { actor } = useActor();
+  const [privatePkgs, setPrivatePkgs] = useState<TourPackage[] | null>(null);
   const [selectedTier, setSelectedTier] = useState(0);
   const [groupSize, setGroupSize] = useState(2);
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
@@ -99,9 +118,112 @@ export default function PrivatePackagesPage({ setPage }: Props) {
   });
   const [loading, setLoading] = useState(false);
 
-  const pricePerPerson = getPricePerPerson(selectedTier, groupSize);
+  useEffect(() => {
+    if (!actor) return;
+    let cancelled = false;
+    actor
+      .listCatalog()
+      .then((cats) => {
+        if (cancelled) return;
+        const priv: TourPackage[] = [];
+        for (const c of cats) {
+          for (const p of c.packages) {
+            if (packageForPrivatePage(p) && "private" in p.detail) {
+              priv.push(p);
+            }
+          }
+        }
+        setPrivatePkgs(priv);
+      })
+      .catch(() => {
+        if (!cancelled) setPrivatePkgs([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [actor]);
+
+  const catalogMode = !!(privatePkgs && privatePkgs.length > 0);
+  const template = catalogMode
+    ? (privatePkgs.find((p) => p.name === bookingPkg) ?? privatePkgs[0])
+    : null;
+
+  const effectiveTiers = useMemo(() => {
+    if (!catalogMode || !template) {
+      return TIERS.map((t, i) => ({
+        key: t.id,
+        label: t.label,
+        color: t.color,
+        pricePerPerson: (gs: number) => getPricePerPerson(i, gs),
+      }));
+    }
+    const priv = privateCfgOf(template);
+    const pr = priv.pricing;
+    if ("multi" in pr) {
+      return pr.multi.tiers.map((tier, i) => ({
+        key: `t-${i}`,
+        label: tier.label,
+        color: TIER_COLOR_CYCLE[i % TIER_COLOR_CYCLE.length]!,
+        pricePerPerson: (_gs: number) => Number(tier.pricePerPersonINR),
+      }));
+    }
+    return [
+      {
+        key: "single",
+        label: "Package rate",
+        color: TIER_COLOR_CYCLE[0]!,
+        pricePerPerson: (_gs: number) => Number(pr.single.pricePerPersonINR),
+      },
+    ];
+  }, [catalogMode, template]);
+
+  const effectiveAddOns = useMemo(() => {
+    if (!catalogMode || !template) return ADD_ONS;
+    return privateCfgOf(template).addOns.map((a) => ({
+      id: String(a.addOnId),
+      label: a.label,
+      price: Number(a.priceINR),
+    }));
+  }, [catalogMode, template]);
+
+  const groupMin =
+    catalogMode && template ? Number(privateCfgOf(template).minGroupSize) : 2;
+  const groupMax =
+    catalogMode && template ? Number(privateCfgOf(template).maxGroupSize) : 15;
+
+  useEffect(() => {
+    setGroupSize((g) => Math.min(Math.max(g, groupMin), groupMax));
+  }, [groupMin, groupMax]);
+
+  useEffect(() => {
+    setSelectedTier((t) => (t >= effectiveTiers.length ? 0 : t));
+  }, [effectiveTiers.length]);
+
+  const displayPackages = useMemo(() => {
+    if (catalogMode && privatePkgs) {
+      return privatePkgs.map((p) => {
+        const tl = p as TourPackageListing;
+        const thumb = String(tl.thumbnailUrl ?? "").trim();
+        return {
+        name: p.name,
+        image: thumb || p.heroImageUrl,
+        sub: p.shortDescription,
+        highlights: [] as string[],
+      };
+      });
+    }
+    return PACKAGES.map((p) => ({
+      name: p.name,
+      image: p.image,
+      sub: p.duration,
+      highlights: p.highlights,
+    }));
+  }, [catalogMode, privatePkgs]);
+
+  const pricePerPerson =
+    effectiveTiers[selectedTier]!.pricePerPerson(groupSize);
   const addOnTotal = selectedAddOns.reduce((sum, id) => {
-    const a = ADD_ONS.find((x) => x.id === id);
+    const a = effectiveAddOns.find((x) => x.id === id);
     return sum + (a ? a.price : 0);
   }, 0);
   const totalPerPerson = pricePerPerson + addOnTotal;
@@ -122,23 +244,43 @@ export default function PrivatePackagesPage({ setPage }: Props) {
       toast.error("Please fill all fields");
       return;
     }
+    if (!bookingPkg) return;
     setLoading(true);
     try {
-      const tierLabel = TIERS[selectedTier].label;
+      const tierLabel = effectiveTiers[selectedTier]!.label;
       const addOnLabels = selectedAddOns.map(
-        (id) => ADD_ONS.find((a) => a.id === id)?.label ?? id,
+        (id) => effectiveAddOns.find((a) => a.id === id)?.label ?? id,
       );
-      await actor.createBooking(
-        "Private Travel",
-        `${bookingPkg} — ${tierLabel}`,
-        form.name,
-        form.email,
-        form.phone,
-        form.date,
-        BigInt(groupSize),
-        addOnLabels,
-        BigInt(grandTotal),
-      );
+      const tourPkg = privatePkgs?.find((p) => p.name === bookingPkg);
+      if (catalogMode && tourPkg) {
+        const pc = privateCfgOf(tourPkg);
+        const tierOpt =
+          "multi" in pc.pricing ? BigInt(selectedTier) : undefined;
+        await actor.createCatalogBooking(
+          tourPkg.id,
+          undefined,
+          tierOpt,
+          form.date,
+          BigInt(groupSize),
+          selectedAddOns.map((id) => BigInt(id)),
+          form.name,
+          form.email,
+          form.phone,
+          BigInt(grandTotal),
+        );
+      } else {
+        await actor.createBooking(
+          "Private Travel",
+          `${bookingPkg} — ${tierLabel}`,
+          form.name,
+          form.email,
+          form.phone,
+          form.date,
+          BigInt(groupSize),
+          addOnLabels,
+          BigInt(grandTotal),
+        );
+      }
       toast.success("Booking confirmed! We'll contact you soon.");
       setBookingPkg(null);
       setForm({ name: "", email: "", phone: "", date: "" });
@@ -226,9 +368,9 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                 Select Your Tier
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {TIERS.map((tier, i) => (
+                {effectiveTiers.map((tier, i) => (
                   <button
-                    key={tier.id}
+                    key={tier.key}
                     type="button"
                     data-ocid="private.tier.toggle"
                     onClick={() => setSelectedTier(i)}
@@ -260,7 +402,9 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                       {tier.label}
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      from ₹{tier.prices[0].toLocaleString("en-IN")}/pp
+                      from ₹
+                      {tier.pricePerPerson(groupSize).toLocaleString("en-IN")}
+                      /pp
                     </div>
                   </button>
                 ))}
@@ -291,51 +435,53 @@ export default function PrivatePackagesPage({ setPage }: Props) {
               </div>
               <Slider
                 data-ocid="private.group_size.input"
-                min={2}
-                max={15}
+                min={groupMin}
+                max={groupMax}
                 step={1}
                 value={[groupSize]}
                 onValueChange={(v) => setGroupSize(v[0])}
                 className="mb-4"
               />
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>2 people</span>
-                <span>15 people</span>
+                <span>{groupMin} people</span>
+                <span>{groupMax} people</span>
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                {[
-                  [
-                    "2 people",
-                    `₹${TIERS[selectedTier].prices[0].toLocaleString("en-IN")}/pp`,
-                  ],
-                  [
-                    "3–5 people",
-                    `₹${TIERS[selectedTier].prices[1].toLocaleString("en-IN")}/pp`,
-                  ],
-                  [
-                    "6–10 people",
-                    `₹${TIERS[selectedTier].prices[2].toLocaleString("en-IN")}/pp`,
-                  ],
-                  [
-                    "11–15 people",
-                    `₹${TIERS[selectedTier].prices[3].toLocaleString("en-IN")}/pp`,
-                  ],
-                ].map(([label, price]) => (
-                  <div
-                    key={label}
-                    className="rounded-lg p-3 text-sm"
-                    style={{ background: "oklch(0.13 0.02 232)" }}
-                  >
-                    <div className="text-muted-foreground">{label}</div>
+              {!catalogMode && (
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  {[
+                    [
+                      "2 people",
+                      `₹${TIERS[selectedTier].prices[0].toLocaleString("en-IN")}/pp`,
+                    ],
+                    [
+                      "3–5 people",
+                      `₹${TIERS[selectedTier].prices[1].toLocaleString("en-IN")}/pp`,
+                    ],
+                    [
+                      "6–10 people",
+                      `₹${TIERS[selectedTier].prices[2].toLocaleString("en-IN")}/pp`,
+                    ],
+                    [
+                      "11–15 people",
+                      `₹${TIERS[selectedTier].prices[3].toLocaleString("en-IN")}/pp`,
+                    ],
+                  ].map(([label, price]) => (
                     <div
-                      className="font-semibold"
-                      style={{ color: "oklch(0.85 0.13 192)" }}
+                      key={label}
+                      className="rounded-lg p-3 text-sm"
+                      style={{ background: "oklch(0.13 0.02 232)" }}
                     >
-                      {price}
+                      <div className="text-muted-foreground">{label}</div>
+                      <div
+                        className="font-semibold"
+                        style={{ color: "oklch(0.85 0.13 192)" }}
+                      >
+                        {price}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </motion.div>
 
             {/* Add-ons */}
@@ -353,7 +499,7 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                 Add-On Activities
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {ADD_ONS.map((addOn) => (
+                {effectiveAddOns.map((addOn) => (
                   <label
                     key={addOn.id}
                     htmlFor={`addon-${addOn.id}`}
@@ -397,7 +543,7 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                 Choose a Package
               </h2>
               <div className="grid sm:grid-cols-2 gap-6">
-                {PACKAGES.map((pkg) => (
+                {displayPackages.map((pkg) => (
                   <div
                     key={pkg.name}
                     className="rounded-2xl overflow-hidden border border-white/10 group"
@@ -423,8 +569,8 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                       <h3 className="font-display font-bold text-lg mb-1">
                         {pkg.name}
                       </h3>
-                      <p className="text-xs text-muted-foreground mb-3">
-                        {pkg.duration}
+                      <p className="text-xs text-muted-foreground mb-3 line-clamp-3">
+                        {pkg.sub}
                       </p>
                       <div className="flex flex-wrap gap-2 mb-4">
                         {pkg.highlights.map((h) => (
@@ -476,9 +622,9 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                   <span className="text-muted-foreground">Tier</span>
                   <span
                     className="font-medium"
-                    style={{ color: TIERS[selectedTier].color }}
+                    style={{ color: effectiveTiers[selectedTier]!.color }}
                   >
-                    {TIERS[selectedTier].label}
+                    {effectiveTiers[selectedTier]!.label}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
@@ -524,15 +670,15 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                   for {groupSize} people
                 </div>
               </div>
-              {ADD_ONS.filter((a) => selectedAddOns.includes(a.id)).length >
-                0 && (
+              {effectiveAddOns.filter((a) => selectedAddOns.includes(a.id))
+                .length > 0 && (
                 <div className="mb-4">
                   <p className="text-xs text-muted-foreground mb-2">
                     Selected add-ons:
                   </p>
                   <div className="flex flex-wrap gap-1">
                     {selectedAddOns.map((id) => {
-                      const a = ADD_ONS.find((x) => x.id === id);
+                      const a = effectiveAddOns.find((x) => x.id === id);
                       return (
                         <Badge key={id} variant="secondary" className="text-xs">
                           {a?.label}
@@ -578,7 +724,7 @@ export default function PrivatePackagesPage({ setPage }: Props) {
             >
               <div className="flex justify-between">
                 <span className="text-muted-foreground">
-                  {TIERS[selectedTier].label} · {groupSize} people
+                  {effectiveTiers[selectedTier]!.label} · {groupSize} people
                 </span>
                 <span
                   className="font-bold"

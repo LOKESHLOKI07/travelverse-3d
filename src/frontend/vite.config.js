@@ -32,6 +32,24 @@ export default defineConfig({
     port: 5007,
     host: true,
     proxy: {
+      // Must be before "/api": Vite matches with path.startsWith(context), so "/api-node"
+      // would incorrectly hit the "/api" rule and go to the replica (4943) instead of Node (4944).
+      "/api-node": {
+        target: "http://127.0.0.1:4944",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api-node/, "") || "/",
+        configure(proxy) {
+          proxy.on("error", (err, _req, res) => {
+            if (!res || res.writableEnded) return;
+            const msg =
+              "Node API unreachable (start tourist-node-api on port 4944, e.g. pnpm dev:api from repo root).";
+            if (typeof res.writeHead === "function") {
+              res.writeHead(502, { "Content-Type": "application/json" });
+              res.end(JSON.stringify({ error: `${msg} ${String(err?.code || err?.message || "")}` }));
+            }
+          });
+        },
+      },
       "/api": {
         target: "http://127.0.0.1:4943",
         changeOrigin: true,
@@ -43,6 +61,9 @@ export default defineConfig({
     environment("all", { prefix: "DFX_" }),
     environment(["II_URL"]),
     environment(["STORAGE_GATEWAY_URL"]),
+    environment(["VITE_USE_NODE_BACKEND"]),
+    environment(["VITE_NODE_API_BASE_URL"]),
+    environment(["VITE_APP_ADMIN_TOKEN"]),
     react(),
   ],
   resolve: {

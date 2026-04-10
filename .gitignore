@@ -1,4 +1,9 @@
 node_modules/
 src/frontend/node_modules/
+src/nodejs-backend/node_modules/
 dist/
 src/frontend/dist/
+src/frontend/src/declarations/backend.from-moc.did
+.env
+src/nodejs-backend/.env
+src/frontend/.env.development

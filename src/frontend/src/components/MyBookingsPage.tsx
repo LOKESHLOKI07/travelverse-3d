@@ -9,6 +9,8 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { Booking } from "../backend.d";
 import type { Page } from "../types";
+import { getUserBearerToken } from "../utils/userLocalSession";
+import { viteEnvIsTrue } from "../utils/viteEnv";
 
 interface Props {
   setPage: (page: Page) => void;
@@ -28,18 +30,21 @@ export default function MyBookingsPage({ setPage }: Props) {
   const { login, loginStatus, identity } = useInternetIdentity();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
+  const nodeBackend = viteEnvIsTrue(import.meta.env.VITE_USE_NODE_BACKEND);
+  const hasLocalUserJwt = Boolean(getUserBearerToken());
+  const canAccessBookings = Boolean(identity) || (nodeBackend && hasLocalUserJwt);
 
   useEffect(() => {
-    if (!actor || isFetching || !identity) return;
+    if (!actor || isFetching || !canAccessBookings) return;
     setLoading(true);
     actor
       .getMyBookings()
       .then((b) => setBookings(b))
       .catch(() => toast.error("Failed to load bookings"))
       .finally(() => setLoading(false));
-  }, [actor, isFetching, identity]);
+  }, [actor, isFetching, canAccessBookings]);
 
-  if (!identity) {
+  if (!canAccessBookings) {
     return (
       <div
         className="min-h-screen flex items-center justify-center"
@@ -62,27 +67,41 @@ export default function MyBookingsPage({ setPage }: Props) {
             View Your Bookings
           </h2>
           <p className="text-muted-foreground mb-6">
-            Please log in to see your bookings.
+            {nodeBackend
+              ? "Sign in with Internet Identity or your email account to see bookings that match your profile."
+              : "Please log in to see your bookings."}
           </p>
-          <Button
-            data-ocid="mybookings.login.primary_button"
-            onClick={() => login()}
-            disabled={loginStatus === "logging-in"}
-            style={{
-              background: "oklch(0.85 0.13 192)",
-              color: "oklch(0.13 0.04 195)",
-              fontWeight: 700,
-            }}
-          >
-            {loginStatus === "logging-in" ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Logging in...
-              </>
-            ) : (
-              "Login"
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-stretch sm:items-center">
+            {nodeBackend && (
+              <Button
+                type="button"
+                variant="outline"
+                className="border-white/20"
+                onClick={() => setPage("account")}
+              >
+                Email sign-in
+              </Button>
             )}
-          </Button>
+            <Button
+              data-ocid="mybookings.login.primary_button"
+              onClick={() => login()}
+              disabled={loginStatus === "logging-in"}
+              style={{
+                background: "oklch(0.85 0.13 192)",
+                color: "oklch(0.13 0.04 195)",
+                fontWeight: 700,
+              }}
+            >
+              {loginStatus === "logging-in" ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Logging in...
+                </>
+              ) : (
+                "Internet Identity"
+              )}
+            </Button>
+          </div>
           <div className="mt-4">
             <button
               type="button"
@@ -162,19 +181,19 @@ export default function MyBookingsPage({ setPage }: Props) {
               No bookings yet
             </h3>
             <p className="text-muted-foreground mb-6">
-              Your adventures await. Explore our packages and book your first
-              trek!
+              Your adventures await. Browse all packages and book your first
+              trip.
             </p>
             <Button
               data-ocid="mybookings.explore.primary_button"
-              onClick={() => setPage("treks-expeditions")}
+              onClick={() => setPage("packages")}
               style={{
                 background: "oklch(0.85 0.13 192)",
                 color: "oklch(0.13 0.04 195)",
                 fontWeight: 700,
               }}
             >
-              Explore Treks
+              Browse packages
             </Button>
           </div>
         ) : (

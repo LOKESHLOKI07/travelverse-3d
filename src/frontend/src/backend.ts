@@ -7,6 +7,14 @@
 import { Actor, HttpAgent, type HttpAgentOptions, type ActorConfig, type Agent, type ActorSubclass } from "@icp-sdk/core/agent";
 import type { Principal } from "@icp-sdk/core/principal";
 import { idlFactory, type _SERVICE } from "./declarations/backend.did";
+import type {
+    Booking as _Booking,
+    BookingStatus as _BookingStatus,
+    Time as _Time,
+    UserRole as _UserRole,
+    CategoryView as _CategoryView,
+    TourPackage as _TourPackage,
+} from "./declarations/backend.did.d.ts";
 export interface Some<T> {
     __kind__: "Some";
     value: T;
@@ -87,6 +95,17 @@ export class ExternalBlob {
         return this;
     }
 }
+export type {
+    AddOnDef,
+    CategoryRecord,
+    CategoryView,
+    FixedBatch,
+    FixedCfg,
+    PackageDetail,
+    PrivateCfg,
+    PrivatePricing,
+    TourPackage,
+} from "./declarations/backend.did.d.ts";
 export interface Booking {
     customerName: string;
     packageName: string;
@@ -100,6 +119,9 @@ export interface Booking {
     groupSize: bigint;
     customerEmail: string;
     totalPriceINR: bigint;
+    catalogPackageId: bigint;
+    catalogBatchId?: bigint;
+    catalogTierIndex?: bigint;
 }
 export type Time = bigint;
 export interface UserProfile {
@@ -121,6 +143,33 @@ export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     createBooking(packageCategory: string, packageName: string, customerName: string, customerEmail: string, customerPhone: string, travelDate: string, groupSize: bigint, addOns: Array<string>, totalPriceINR: bigint): Promise<bigint>;
+    createCatalogBooking(
+        packageId: bigint,
+        batchId: bigint | undefined,
+        tierIndex: bigint | undefined,
+        travelDate: string,
+        groupSize: bigint,
+        selectedAddOnIds: Array<bigint>,
+        customerName: string,
+        customerEmail: string,
+        customerPhone: string,
+        claimedTotalPriceINR: bigint,
+    ): Promise<bigint>;
+    listCatalog(): Promise<Array<_CategoryView>>;
+    getPackage(packageId: bigint): Promise<_TourPackage | null>;
+    adminUpsertCategory(
+        id: bigint | undefined,
+        name: string,
+        sortOrder: bigint,
+        active: boolean,
+    ): Promise<bigint>;
+    adminDeleteCategory(categoryId: bigint): Promise<void>;
+    adminPutPackage(pkg: _TourPackage): Promise<bigint>;
+    adminDeletePackage(packageId: bigint): Promise<void>;
+    adminReserveBatchIds(count: bigint): Promise<Array<bigint>>;
+    adminSeedDemoCatalog(): Promise<void>;
+    /** Node dev API only: clears catalog then inserts full demo data (requires admin). */
+    adminReplaceDemoCatalog?(): Promise<void>;
     getAllBookings(): Promise<Array<Booking>>;
     getCallerUserProfile(): Promise<UserProfile>;
     getCallerUserRole(): Promise<UserRole>;
@@ -130,7 +179,6 @@ export interface backendInterface {
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     updateBookingStatus(bookingId: bigint, newStatus: BookingStatus): Promise<void>;
 }
-import type { Booking as _Booking, BookingStatus as _BookingStatus, Time as _Time, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async _initializeAccessControlWithSecret(arg0: string): Promise<void> {
@@ -251,6 +299,10 @@ export class Backend implements backendInterface {
                 const result = await this.actor.isCallerAdmin();
                 return result;
             } catch (e) {
+                console.error(
+                    "[tourist admin] canister isCallerAdmin query failed (trap, reject, or agent error)",
+                    { rawError: e },
+                );
                 this.processError(e);
                 throw new Error("unreachable");
             }
@@ -287,6 +339,160 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async createCatalogBooking(
+        packageId: bigint,
+        batchId: bigint | undefined,
+        tierIndex: bigint | undefined,
+        travelDate: string,
+        groupSize: bigint,
+        selectedAddOnIds: Array<bigint>,
+        customerName: string,
+        customerEmail: string,
+        customerPhone: string,
+        claimedTotalPriceINR: bigint,
+    ): Promise<bigint> {
+        const run = () =>
+            this.actor.createCatalogBooking(
+                packageId,
+                batchId === undefined ? [] : [batchId],
+                tierIndex === undefined ? [] : [tierIndex],
+                travelDate,
+                groupSize,
+                selectedAddOnIds,
+                customerName,
+                customerEmail,
+                customerPhone,
+                claimedTotalPriceINR,
+            );
+        if (this.processError) {
+            try {
+                return await run();
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        }
+        return await run();
+    }
+    async listCatalog(): Promise<Array<_CategoryView>> {
+        const run = () => this.actor.listCatalog();
+        if (this.processError) {
+            try {
+                return await run();
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        }
+        return await run();
+    }
+    async getPackage(packageId: bigint): Promise<_TourPackage | null> {
+        const run = () => this.actor.getPackage(packageId);
+        if (this.processError) {
+            try {
+                const r = await run();
+                return unwrapOptTourPackage(r);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        }
+        return unwrapOptTourPackage(await run());
+    }
+    async adminUpsertCategory(
+        id: bigint | undefined,
+        name: string,
+        sortOrder: bigint,
+        active: boolean,
+    ): Promise<bigint> {
+        const run = () =>
+            this.actor.adminUpsertCategory(
+                id === undefined ? [] : [id],
+                name,
+                sortOrder,
+                active,
+            );
+        if (this.processError) {
+            try {
+                return await run();
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        }
+        return await run();
+    }
+    async adminDeleteCategory(categoryId: bigint): Promise<void> {
+        const run = () => this.actor.adminDeleteCategory(categoryId);
+        if (this.processError) {
+            try {
+                await run();
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+            return;
+        }
+        await run();
+    }
+    async adminPutPackage(pkg: _TourPackage): Promise<bigint> {
+        const run = () => this.actor.adminPutPackage(pkg);
+        if (this.processError) {
+            try {
+                return await run();
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        }
+        return await run();
+    }
+    async adminDeletePackage(packageId: bigint): Promise<void> {
+        const run = () => this.actor.adminDeletePackage(packageId);
+        if (this.processError) {
+            try {
+                await run();
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+            return;
+        }
+        await run();
+    }
+    async adminReserveBatchIds(count: bigint): Promise<Array<bigint>> {
+        const run = () => this.actor.adminReserveBatchIds(count);
+        if (this.processError) {
+            try {
+                return await run();
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        }
+        return await run();
+    }
+    async adminSeedDemoCatalog(): Promise<void> {
+        const run = () => this.actor.adminSeedDemoCatalog();
+        if (this.processError) {
+            try {
+                await run();
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+            return;
+        }
+        await run();
+    }
+}
+function unwrapOptTourPackage(r: unknown): _TourPackage | null {
+    if (r === null || r === undefined) return null;
+    if (Array.isArray(r)) {
+        if (r.length === 0) return null;
+        return r[0] as _TourPackage;
+    }
+    return r as _TourPackage;
 }
 function from_candid_BookingStatus_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _BookingStatus): BookingStatus {
     return from_candid_variant_n7(_uploadFile, _downloadFile, value);
@@ -297,33 +503,14 @@ function from_candid_Booking_n4(_uploadFile: (file: ExternalBlob) => Promise<Uin
 function from_candid_UserRole_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
     return from_candid_variant_n9(_uploadFile, _downloadFile, value);
 }
-function from_candid_record_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    customerName: string;
-    packageName: string;
-    status: _BookingStatus;
-    bookingId: bigint;
-    customerPhone: string;
-    packageCategory: string;
-    addOns: Array<string>;
-    createdTimestamp: _Time;
-    travelDate: string;
-    groupSize: bigint;
-    customerEmail: string;
-    totalPriceINR: bigint;
-}): {
-    customerName: string;
-    packageName: string;
-    status: BookingStatus;
-    bookingId: bigint;
-    customerPhone: string;
-    packageCategory: string;
-    addOns: Array<string>;
-    createdTimestamp: Time;
-    travelDate: string;
-    groupSize: bigint;
-    customerEmail: string;
-    totalPriceINR: bigint;
-} {
+function unwrapOptNat(v: [] | [bigint] | undefined | null): bigint | undefined {
+    if (v === undefined || v === null) return undefined;
+    if (Array.isArray(v) && v.length === 0) return undefined;
+    return v[0];
+}
+function from_candid_record_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Booking): Booking {
+    const catalogBatchId = unwrapOptNat(value.catalogBatchId);
+    const catalogTierIndex = unwrapOptNat(value.catalogTierIndex);
     return {
         customerName: value.customerName,
         packageName: value.packageName,
@@ -336,7 +523,10 @@ function from_candid_record_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint
         travelDate: value.travelDate,
         groupSize: value.groupSize,
         customerEmail: value.customerEmail,
-        totalPriceINR: value.totalPriceINR
+        totalPriceINR: value.totalPriceINR,
+        catalogPackageId: value.catalogPackageId,
+        catalogBatchId,
+        catalogTierIndex,
     };
 }
 function from_candid_variant_n7(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {

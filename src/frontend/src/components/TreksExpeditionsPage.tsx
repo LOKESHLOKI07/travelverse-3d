@@ -18,8 +18,15 @@ import {
   Users,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import type { TourPackage } from "../backend";
+import {
+  packageForTreksPage,
+  parseTrekDifficultyColor,
+  parseTrekSubtitle,
+  type TourPackageListing,
+} from "../utils/catalogListing";
 import type { Page } from "../types";
 
 interface Props {
@@ -29,6 +36,7 @@ interface Props {
 interface Batch {
   date: string;
   seats: number;
+  batchId?: bigint;
 }
 
 interface Trek {
@@ -40,6 +48,7 @@ interface Trek {
   difficulty: string;
   difficultyColor: string;
   batches: Batch[];
+  packageId?: bigint;
 }
 
 const TREKS: Trek[] = [
@@ -113,14 +122,80 @@ function SeatBadge({ seats }: { seats: number }) {
   );
 }
 
+function fixedCfgOf(p: TourPackage) {
+  if (!("fixed" in p.detail)) {
+    throw new Error("Expected fixed-departure trek package");
+  }
+  return p.detail.fixed;
+}
+
+function tourPackageToTrek(p: TourPackage): Trek {
+  const f = fixedCfgOf(p);
+  const tl = p as TourPackageListing;
+  const thumb = String(tl.thumbnailUrl ?? "").trim();
+  const { duration, altitude, difficulty } = parseTrekSubtitle(
+    p.shortDescription,
+  );
+  return {
+    name: p.name,
+    price: Number(f.pricePerPersonINR),
+    image: thumb || p.heroImageUrl,
+    duration,
+    altitude,
+    difficulty,
+    difficultyColor: parseTrekDifficultyColor(tl.longDescription),
+    packageId: p.id,
+    batches: f.batches.map((b) => ({
+      date: b.dateLabel,
+      seats: Number(b.seatsRemaining),
+      batchId: b.batchId,
+    })),
+  };
+}
+
 export default function TreksExpeditionsPage({ setPage }: Props) {
   const { actor } = useActor();
+  const [trekPkgs, setTrekPkgs] = useState<TourPackage[] | null>(null);
   const [bookingTarget, setBookingTarget] = useState<{
     trek: Trek;
     batch: Batch;
   } | null>(null);
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!actor) return;
+    let cancelled = false;
+    actor
+      .listCatalog()
+      .then((cats) => {
+        if (cancelled) return;
+        const rows: TourPackage[] = [];
+        for (const c of cats) {
+          for (const p of c.packages) {
+            if (packageForTreksPage(p) && "fixed" in p.detail) {
+              rows.push(p);
+            }
+          }
+        }
+        setTrekPkgs(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setTrekPkgs([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [actor]);
+
+  const displayTreks = useMemo(() => {
+    if (trekPkgs && trekPkgs.length > 0) {
+      return trekPkgs.map(tourPackageToTrek);
+    }
+    return TREKS;
+  }, [trekPkgs]);
+
+  const catalogMode = !!(trekPkgs && trekPkgs.length > 0);
 
   const handleBook = async () => {
     if (!actor) {
@@ -134,17 +209,37 @@ export default function TreksExpeditionsPage({ setPage }: Props) {
     if (!bookingTarget) return;
     setLoading(true);
     try {
-      await actor.createBooking(
-        "Trek & Expedition",
-        bookingTarget.trek.name,
-        form.name,
-        form.email,
-        form.phone,
-        bookingTarget.batch.date,
-        BigInt(1),
-        [],
-        BigInt(bookingTarget.trek.price),
-      );
+      const { trek, batch } = bookingTarget;
+      if (
+        catalogMode &&
+        trek.packageId !== undefined &&
+        batch.batchId !== undefined
+      ) {
+        await actor.createCatalogBooking(
+          trek.packageId,
+          batch.batchId,
+          undefined,
+          batch.date,
+          BigInt(1),
+          [],
+          form.name,
+          form.email,
+          form.phone,
+          BigInt(trek.price),
+        );
+      } else {
+        await actor.createBooking(
+          "Trek & Expedition",
+          trek.name,
+          form.name,
+          form.email,
+          form.phone,
+          batch.date,
+          BigInt(1),
+          [],
+          BigInt(trek.price),
+        );
+      }
       toast.success("Trek booked! Adventure awaits. 🏔");
       setBookingTarget(null);
       setForm({ name: "", email: "", phone: "" });
@@ -212,9 +307,9 @@ export default function TreksExpeditionsPage({ setPage }: Props) {
         </motion.div>
 
         <div className="grid gap-8">
-          {TREKS.map((trek, idx) => (
+          {displayTreks.map((trek, idx) => (
             <motion.div
-              key={trek.name}
+              key={`${trek.name}-${trek.packageId ?? "static"}`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: idx * 0.1 }}
@@ -291,7 +386,7 @@ export default function TreksExpeditionsPage({ setPage }: Props) {
                     <div className="flex flex-wrap gap-3">
                       {trek.batches.map((batch) => (
                         <div
-                          key={batch.date}
+                          key={`${trek.name}-${batch.batchId ?? batch.date}`}
                           className="flex items-center gap-3 rounded-xl px-4 py-3 border"
                           style={{
                             borderColor:

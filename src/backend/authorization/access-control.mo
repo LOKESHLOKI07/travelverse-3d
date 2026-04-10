@@ -61,7 +61,16 @@ module {
     };
   };
 
+  /// Returns false for anonymous, unregistered, or non-admin callers. Does not trap on unknown principals
+  /// (needed so `isCallerAdmin` query works before `_initializeAccessControlWithSecret`).
   public func isAdmin(state : AccessControlState, caller : Principal) : Bool {
-    getUserRole(state, caller) == #admin;
+    if (caller.isAnonymous()) {
+      return false;
+    };
+    switch (state.userRoles.get(caller)) {
+      case (null) { false };
+      case (? #admin) { true };
+      case (? _) { false };
+    };
   };
 };

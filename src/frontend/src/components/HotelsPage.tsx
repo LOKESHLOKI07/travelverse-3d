@@ -7,13 +7,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useActor } from "@/hooks/useActor";
 import {
@@ -26,8 +19,15 @@ import {
   Users,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import type { TourPackage } from "../backend";
+import {
+  packageForHotelsTab,
+  packageForVillasPage,
+  parseHotelRating,
+  type TourPackageListing,
+} from "../utils/catalogListing";
 import type { Page } from "../types";
 
 interface Props {
@@ -84,12 +84,95 @@ const VILLAS = [
   },
 ];
 
+type HotelDisplay = {
+  key: string;
+  name: string;
+  image: string;
+  location: string;
+  rating: number;
+  rooms: { type: string; price: number }[];
+};
+
+function tourPackageToHotelDisplay(p: TourPackage): HotelDisplay {
+  if (!("private" in p.detail)) {
+    throw new Error("Hotel catalog expects private pricing (tiers = room types)");
+  }
+  const pr = p.detail.private.pricing;
+  const rooms =
+    "multi" in pr
+      ? pr.multi.tiers.map((t) => ({
+          type: t.label,
+          price: Number(t.pricePerPersonINR),
+        }))
+      : [
+          {
+            type: "Room",
+            price: Number(pr.single.pricePerPersonINR),
+          },
+        ];
+  const tl = p as TourPackageListing;
+  const thumb = String(tl.thumbnailUrl ?? "").trim();
+  return {
+    key: `c-h-${p.id}`,
+    name: p.name,
+    image: thumb || p.heroImageUrl,
+    location: p.shortDescription,
+    rating: parseHotelRating(tl.longDescription),
+    rooms,
+  };
+}
+
+type VillaDisplay = {
+  key: string;
+  name: string;
+  image: string;
+  location: string;
+  pricePerPerson: number;
+  weekdayMin: number;
+  weekendMin: number;
+  amenities: string[];
+  catalogPackageId?: bigint;
+};
+
+function tourPackageToVillaDisplay(p: TourPackage): VillaDisplay {
+  if (!("private" in p.detail)) {
+    throw new Error("Villa catalog entry expects private-style pricing");
+  }
+  const pc = p.detail.private;
+  const pr = pc.pricing;
+  const ppp =
+    "single" in pr
+      ? Number(pr.single.pricePerPersonINR)
+      : Number(pr.multi.tiers[0]?.pricePerPersonINR ?? 0);
+  const minG = Number(pc.minGroupSize);
+  const maxG = Number(pc.maxGroupSize);
+  const tl = p as TourPackageListing;
+  const rawAmenities = (tl.longDescription ?? "")
+    .split(/[,\n]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const amenities =
+    rawAmenities.length > 0 ? rawAmenities.slice(0, 12) : ["Private stay"];
+  const img = String(tl.thumbnailUrl ?? "").trim() || p.heroImageUrl;
+  return {
+    key: `c-${p.id}`,
+    name: p.name,
+    image: img,
+    location: p.shortDescription,
+    pricePerPerson: ppp,
+    weekdayMin: minG,
+    weekendMin: maxG > minG ? maxG : minG,
+    amenities,
+    catalogPackageId: p.id,
+  };
+}
+
 type BookingTargetHotel = {
-  hotel: (typeof HOTELS)[0];
+  hotel: HotelDisplay;
   roomType: string;
   roomPrice: number;
 };
-type BookingTargetVilla = { villa: (typeof VILLAS)[0] };
+type BookingTargetVilla = { row: VillaDisplay };
 
 function isWeekend(dateStr: string): boolean {
   if (!dateStr) return false;
@@ -99,6 +182,12 @@ function isWeekend(dateStr: string): boolean {
 
 export default function HotelsPage({ setPage }: Props) {
   const { actor } = useActor();
+  const [villaCatalogPkgs, setVillaCatalogPkgs] = useState<
+    TourPackage[] | null
+  >(null);
+  const [hotelCatalogPkgs, setHotelCatalogPkgs] = useState<
+    TourPackage[] | null
+  >(null);
   const [hotelBooking, setHotelBooking] = useState<BookingTargetHotel | null>(
     null,
   );
@@ -126,6 +215,87 @@ export default function HotelsPage({ setPage }: Props) {
   });
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (!actor) return;
+    let cancelled = false;
+    actor
+      .listCatalog()
+      .then((cats) => {
+        if (cancelled) return;
+        const villas: TourPackage[] = [];
+        const hotels: TourPackage[] = [];
+        for (const c of cats) {
+          for (const p of c.packages) {
+            if (packageForVillasPage(p) && "private" in p.detail) {
+              villas.push(p);
+            }
+            if (packageForHotelsTab(p) && "private" in p.detail) {
+              hotels.push(p);
+            }
+          }
+        }
+        setVillaCatalogPkgs(villas);
+        setHotelCatalogPkgs(hotels);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setVillaCatalogPkgs([]);
+          setHotelCatalogPkgs([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [actor]);
+
+  const staticHotelRows: HotelDisplay[] = useMemo(
+    () =>
+      HOTELS.map((h, i) => ({
+        key: `s-h-${i}`,
+        name: h.name,
+        image: h.image,
+        location: h.location,
+        rating: h.rating,
+        rooms: h.rooms.map((r) => ({ type: r.type, price: r.price })),
+      })),
+    [],
+  );
+
+  const displayHotelRows = useMemo((): HotelDisplay[] => {
+    if (!hotelCatalogPkgs || hotelCatalogPkgs.length === 0) {
+      return staticHotelRows;
+    }
+    const fromCat = hotelCatalogPkgs.map((p) => tourPackageToHotelDisplay(p));
+    const catNames = new Set(fromCat.map((r) => r.name));
+    const fallback = staticHotelRows.filter((r) => !catNames.has(r.name));
+    return [...fromCat, ...fallback];
+  }, [hotelCatalogPkgs, staticHotelRows]);
+
+  const staticVillaRows: VillaDisplay[] = useMemo(
+    () =>
+      VILLAS.map((v, i) => ({
+        key: `s-${i}`,
+        name: v.name,
+        image: v.image,
+        location: v.location,
+        pricePerPerson: v.pricePerPerson,
+        weekdayMin: v.weekdayMin,
+        weekendMin: v.weekendMin,
+        amenities: v.amenities,
+      })),
+    [],
+  );
+
+  const displayVillaRows = useMemo((): VillaDisplay[] => {
+    if (!villaCatalogPkgs || villaCatalogPkgs.length === 0) {
+      return staticVillaRows;
+    }
+    const fromCat = villaCatalogPkgs.map((p) => tourPackageToVillaDisplay(p));
+    const catNames = new Set(fromCat.map((r) => r.name));
+    const fallback = staticVillaRows.filter((r) => !catNames.has(r.name));
+    return [...fromCat, ...fallback];
+  }, [villaCatalogPkgs, staticVillaRows]);
+
   const calcNights = (checkin: string, checkout: string) => {
     if (!checkin || !checkout) return 0;
     const diff = new Date(checkout).getTime() - new Date(checkin).getTime();
@@ -139,15 +309,15 @@ export default function HotelsPage({ setPage }: Props) {
 
   const villaNights = calcNights(villaForm.checkin, villaForm.checkout);
   const villaTotal = villaBooking
-    ? villaBooking.villa.pricePerPerson *
+    ? villaBooking.row.pricePerPerson *
       villaForm.persons *
       Math.max(1, villaNights)
     : 0;
   const isCheckInWeekend = isWeekend(villaForm.checkin);
   const minPersons = villaBooking
     ? isCheckInWeekend
-      ? villaBooking.villa.weekendMin
-      : villaBooking.villa.weekdayMin
+      ? villaBooking.row.weekendMin
+      : villaBooking.row.weekdayMin
     : 0;
   const belowMin = villaBooking && villaForm.persons < minPersons;
 
@@ -215,17 +385,40 @@ export default function HotelsPage({ setPage }: Props) {
     if (!villaBooking) return;
     setLoading(true);
     try {
-      await actor.createBooking(
-        "Villa/Farmhouse",
-        villaBooking.villa.name,
-        villaForm.name,
-        villaForm.email,
-        villaForm.phone,
-        villaForm.checkin,
-        BigInt(villaForm.persons),
-        [],
-        BigInt(villaTotal),
-      );
+      const { row } = villaBooking;
+      const catalogPkg =
+        row.catalogPackageId !== undefined
+          ? villaCatalogPkgs?.find((p) => p.id === row.catalogPackageId)
+          : undefined;
+      if (catalogPkg && "private" in catalogPkg.detail) {
+        const pc = catalogPkg.detail.private;
+        const tierOpt =
+          "multi" in pc.pricing ? BigInt(0) : undefined;
+        await actor.createCatalogBooking(
+          catalogPkg.id,
+          undefined,
+          tierOpt,
+          `${villaForm.checkin} → ${villaForm.checkout}`,
+          BigInt(villaForm.persons),
+          [],
+          villaForm.name,
+          villaForm.email,
+          villaForm.phone,
+          BigInt(villaTotal),
+        );
+      } else {
+        await actor.createBooking(
+          "Villa/Farmhouse",
+          row.name,
+          villaForm.name,
+          villaForm.email,
+          villaForm.phone,
+          villaForm.checkin,
+          BigInt(villaForm.persons),
+          [],
+          BigInt(villaTotal),
+        );
+      }
       toast.success("Villa booking confirmed!");
       setVillaBooking(null);
       setVillaForm({
@@ -311,11 +504,11 @@ export default function HotelsPage({ setPage }: Props) {
           {/* HOTELS TAB */}
           <TabsContent value="hotels">
             <div className="grid gap-8">
-              {HOTELS.map((hotel, idx) => {
+              {displayHotelRows.map((hotel, idx) => {
                 const sel = selectedRooms[hotel.name];
                 return (
                   <motion.div
-                    key={hotel.name}
+                    key={hotel.key}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: idx * 0.1 }}
@@ -431,9 +624,9 @@ export default function HotelsPage({ setPage }: Props) {
           {/* VILLAS TAB */}
           <TabsContent value="villas">
             <div className="grid md:grid-cols-2 gap-8">
-              {VILLAS.map((villa, idx) => (
+              {displayVillaRows.map((villa, idx) => (
                 <motion.div
-                  key={villa.name}
+                  key={villa.key}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: idx * 0.1 }}
@@ -515,7 +708,7 @@ export default function HotelsPage({ setPage }: Props) {
                     <Button
                       data-ocid="hotels.villa.primary_button"
                       className="w-full font-bold"
-                      onClick={() => setVillaBooking({ villa })}
+                      onClick={() => setVillaBooking({ row: villa })}
                       style={{
                         background: "oklch(0.85 0.13 192)",
                         color: "oklch(0.13 0.04 195)",
@@ -711,7 +904,7 @@ export default function HotelsPage({ setPage }: Props) {
           <DialogHeader>
             <DialogTitle className="font-display">
               <span style={{ color: "oklch(0.85 0.13 192)" }}>
-                {villaBooking?.villa.name}
+                {villaBooking?.row.name}
               </span>
             </DialogTitle>
           </DialogHeader>
@@ -797,7 +990,7 @@ export default function HotelsPage({ setPage }: Props) {
                     <span className="text-muted-foreground">
                       {villaForm.persons} persons × {villaNights} night
                       {villaNights > 1 ? "s" : ""} × ₹
-                      {villaBooking.villa.pricePerPerson.toLocaleString(
+                      {villaBooking.row.pricePerPerson.toLocaleString(
                         "en-IN",
                       )}
                     </span>

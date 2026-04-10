@@ -11,8 +11,13 @@ import { Label } from "@/components/ui/label";
 import { useActor } from "@/hooks/useActor";
 import { ArrowLeft, Calendar, Loader2, Mountain, Users } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import type { TourPackage } from "../backend";
+import {
+  packageForFixedPage,
+  type TourPackageListing,
+} from "../utils/catalogListing";
 import type { Page } from "../types";
 
 interface Props {
@@ -22,6 +27,7 @@ interface Props {
 interface Batch {
   date: string;
   seats: number;
+  batchId?: bigint;
 }
 
 interface Package {
@@ -30,6 +36,7 @@ interface Package {
   image: string;
   duration: string;
   batches: Batch[];
+  packageId?: bigint;
 }
 
 const PACKAGES: Package[] = [
@@ -95,14 +102,74 @@ function SeatBadge({ seats }: { seats: number }) {
   );
 }
 
+function fixedCfgOf(p: TourPackage) {
+  if (!("fixed" in p.detail)) {
+    throw new Error("Expected fixed package");
+  }
+  return p.detail.fixed;
+}
+
+function tourPackageToFixedDisplay(p: TourPackage): Package {
+  const f = fixedCfgOf(p);
+  const tl = p as TourPackageListing;
+  const thumb = String(tl.thumbnailUrl ?? "").trim();
+  return {
+    name: p.name,
+    price: Number(f.pricePerPersonINR),
+    image: thumb || p.heroImageUrl,
+    duration: p.shortDescription,
+    packageId: p.id,
+    batches: f.batches.map((b) => ({
+      date: b.dateLabel,
+      seats: Number(b.seatsRemaining),
+      batchId: b.batchId,
+    })),
+  };
+}
+
 export default function FixedPackagesPage({ setPage }: Props) {
   const { actor } = useActor();
+  const [fixedPkgs, setFixedPkgs] = useState<TourPackage[] | null>(null);
   const [bookingTarget, setBookingTarget] = useState<{
     pkg: Package;
     batch: Batch;
   } | null>(null);
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!actor) return;
+    let cancelled = false;
+    actor
+      .listCatalog()
+      .then((cats) => {
+        if (cancelled) return;
+        const fix: TourPackage[] = [];
+        for (const c of cats) {
+          for (const p of c.packages) {
+            if (packageForFixedPage(p) && "fixed" in p.detail) {
+              fix.push(p);
+            }
+          }
+        }
+        setFixedPkgs(fix);
+      })
+      .catch(() => {
+        if (!cancelled) setFixedPkgs([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [actor]);
+
+  const displayPackages = useMemo(() => {
+    if (fixedPkgs && fixedPkgs.length > 0) {
+      return fixedPkgs.map(tourPackageToFixedDisplay);
+    }
+    return PACKAGES;
+  }, [fixedPkgs]);
+
+  const catalogMode = !!(fixedPkgs && fixedPkgs.length > 0);
 
   const handleBook = async () => {
     if (!actor) {
@@ -116,17 +183,37 @@ export default function FixedPackagesPage({ setPage }: Props) {
     if (!bookingTarget) return;
     setLoading(true);
     try {
-      await actor.createBooking(
-        "Fixed Date Package",
-        bookingTarget.pkg.name,
-        form.name,
-        form.email,
-        form.phone,
-        bookingTarget.batch.date,
-        BigInt(1),
-        [],
-        BigInt(bookingTarget.pkg.price),
-      );
+      const { pkg, batch } = bookingTarget;
+      if (
+        catalogMode &&
+        pkg.packageId !== undefined &&
+        batch.batchId !== undefined
+      ) {
+        await actor.createCatalogBooking(
+          pkg.packageId,
+          batch.batchId,
+          undefined,
+          batch.date,
+          BigInt(1),
+          [],
+          form.name,
+          form.email,
+          form.phone,
+          BigInt(pkg.price),
+        );
+      } else {
+        await actor.createBooking(
+          "Fixed Date Package",
+          pkg.name,
+          form.name,
+          form.email,
+          form.phone,
+          batch.date,
+          BigInt(1),
+          [],
+          BigInt(pkg.price),
+        );
+      }
       toast.success("Booking confirmed! We'll contact you soon.");
       setBookingTarget(null);
       setForm({ name: "", email: "", phone: "" });
@@ -197,7 +284,7 @@ export default function FixedPackagesPage({ setPage }: Props) {
         </motion.div>
 
         <div className="grid gap-8">
-          {PACKAGES.map((pkg, idx) => (
+          {displayPackages.map((pkg, idx) => (
             <motion.div
               key={pkg.name}
               initial={{ opacity: 0, y: 20 }}
@@ -231,8 +318,8 @@ export default function FixedPackagesPage({ setPage }: Props) {
                         {pkg.name}
                       </h2>
                       <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5" />
+                        <span className="flex items-center gap-1 line-clamp-2">
+                          <Calendar className="w-3.5 h-3.5 shrink-0" />
                           {pkg.duration}
                         </span>
                         <span>·</span>
@@ -261,7 +348,7 @@ export default function FixedPackagesPage({ setPage }: Props) {
                     <div className="flex flex-wrap gap-3">
                       {pkg.batches.map((batch) => (
                         <div
-                          key={batch.date}
+                          key={`${pkg.name}-${batch.batchId ?? batch.date}`}
                           className="flex items-center gap-3 rounded-xl px-4 py-3 border"
                           style={{
                             borderColor:

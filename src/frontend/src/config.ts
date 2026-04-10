@@ -1,3 +1,5 @@
+import { Principal } from "@icp-sdk/core/principal";
+import { createNodeHttpBackend } from "./api/nodeHttpBackend";
 import {
   createActor,
   type backendInterface,
@@ -6,6 +8,7 @@ import {
 } from "./backend";
 import { StorageClient } from "./utils/StorageClient";
 import { logDevConfigLoaded } from "./utils/devDebug";
+import { viteEnvIsTrue } from "./utils/viteEnv";
 import { HttpAgent } from "@icp-sdk/core/agent";
 
 /** Set `STORAGE_GATEWAY_URL` when using remote blob storage. */
@@ -152,6 +155,34 @@ export async function createActorWithConfig(
   const mock = await maybeLoadMockBackend();
   if (mock) {
     return mock;
+  }
+
+  if (viteEnvIsTrue(import.meta.env.VITE_USE_NODE_BACKEND)) {
+    type IdentityLike = { getPrincipal(): { toText(): string } };
+    const raw = options?.agentOptions?.identity;
+    const identity = raw
+      ? await Promise.resolve(raw as IdentityLike | Promise<IdentityLike>)
+      : undefined;
+    const getPrincipalText = () => {
+      try {
+        const id = identity;
+        if (!id) return Principal.anonymous().toText();
+        return id.getPrincipal().toText();
+      } catch {
+        return Principal.anonymous().toText();
+      }
+    };
+    const base =
+      (import.meta.env.VITE_NODE_API_BASE_URL as string | undefined) ||
+      "/api-node";
+    const { getAdminBearerToken } = await import("./utils/adminLocalSession");
+    const { getUserBearerToken } = await import("./utils/userLocalSession");
+    return createNodeHttpBackend(
+      base,
+      getPrincipalText,
+      getAdminBearerToken,
+      getUserBearerToken,
+    );
   }
 
   const config = await loadConfig();

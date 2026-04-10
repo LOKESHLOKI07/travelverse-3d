@@ -1,22 +1,71 @@
 import { Toaster } from "@/components/ui/sonner";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import AdminPage from "./components/AdminPage";
-import FixedPackagesPage from "./components/FixedPackagesPage";
 import HomePage from "./components/HomePage";
-import HotelsPage from "./components/HotelsPage";
+import UserAccountPage from "./components/UserAccountPage";
 import MyBookingsPage from "./components/MyBookingsPage";
-import PrivatePackagesPage from "./components/PrivatePackagesPage";
-import TrekDetailPage from "./components/TrekDetailPage";
-import TreksExpeditionsPage from "./components/TreksExpeditionsPage";
+import PackageDetailPage from "./components/PackageDetailPage";
+import PackagesBrowsePage from "./components/PackagesBrowsePage";
 import type { Page } from "./types";
 
-export default function App() {
-  const [page, setPage] = useState<Page>("home");
+function initialPageFromPath(): Page {
+  if (typeof window === "undefined") return "home";
+  const path = window.location.pathname.replace(/\/$/, "") || "/";
+  if (path === "/admin") return "admin";
+  if (path === "/account") return "account";
+  return "home";
+}
 
-  const openBooking = (dest?: string) => {
-    // legacy: navigate to home and open booking
-    console.log("openBooking", dest);
-  };
+export default function App() {
+  const [page, setPageState] = useState<Page>(initialPageFromPath);
+  const [selectedPackageId, setSelectedPackageId] = useState<bigint | null>(
+    null,
+  );
+
+  const setPage = useCallback((p: Page) => {
+    setPageState(p);
+    if (p === "admin") {
+      if (window.location.pathname !== "/admin") {
+        window.history.pushState(null, "", "/admin");
+      }
+    } else if (p === "account") {
+      if (window.location.pathname !== "/account") {
+        window.history.pushState(null, "", "/account");
+      }
+    } else if (
+      window.location.pathname === "/admin" ||
+      window.location.pathname === "/account"
+    ) {
+      window.history.pushState(null, "", "/");
+    }
+  }, []);
+
+  const openPackagesCatalog = useCallback(() => {
+    setSelectedPackageId(null);
+    setPage("packages");
+  }, [setPage]);
+
+  const openPackageDetail = useCallback((id: bigint) => {
+    setSelectedPackageId(id);
+    setPage("package-detail");
+  }, [setPage]);
+
+  const backFromPackageDetail = useCallback(() => {
+    setSelectedPackageId(null);
+    setPage("packages");
+  }, [setPage]);
+
+  useEffect(() => {
+    const onPopState = () => {
+      const path = window.location.pathname.replace(/\/$/, "") || "/";
+      if (path === "/admin") setPageState("admin");
+      else if (path === "/account") setPageState("account");
+      else setPageState("home");
+      setSelectedPackageId(null);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   const bg =
     "linear-gradient(160deg, oklch(0.13 0.025 232) 0%, oklch(0.09 0.018 232) 100%)";
@@ -25,18 +74,23 @@ export default function App() {
     <div className="min-h-screen" style={{ background: bg }}>
       <Toaster position="top-right" richColors />
       {page === "home" && (
-        <HomePage setPage={setPage} openBooking={openBooking} />
+        <HomePage setPage={setPage} openPackagesCatalog={openPackagesCatalog} />
       )}
-      {page === "trek-detail" && (
-        <TrekDetailPage setPage={setPage} openBooking={openBooking} />
+      {page === "packages" && (
+        <PackagesBrowsePage
+          setPage={setPage}
+          openPackageDetail={openPackageDetail}
+        />
       )}
-      {page === "private-packages" && <PrivatePackagesPage setPage={setPage} />}
-      {page === "fixed-packages" && <FixedPackagesPage setPage={setPage} />}
-      {page === "treks-expeditions" && (
-        <TreksExpeditionsPage setPage={setPage} />
+      {page === "package-detail" && (
+        <PackageDetailPage
+          packageId={selectedPackageId}
+          setPage={setPage}
+          onBackToList={backFromPackageDetail}
+        />
       )}
-      {page === "hotels" && <HotelsPage setPage={setPage} />}
       {page === "my-bookings" && <MyBookingsPage setPage={setPage} />}
+      {page === "account" && <UserAccountPage setPage={setPage} />}
       {page === "admin" && <AdminPage setPage={setPage} />}
     </div>
   );
