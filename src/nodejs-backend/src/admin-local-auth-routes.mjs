@@ -34,6 +34,8 @@ export function attachAdminLocalAuthRoutes(app, ctx) {
 
   const OTP_RESEND_MS = 60_000;
   const OTP_TTL_MS = 10 * 60_000;
+  /** Synthetic JWT sub for env-based bootstrap admin (avoids colliding with low DB ids). */
+  const BOOTSTRAP_ADMIN_SUB = 900_000_001;
 
   function normalizeEmail(e) {
     return String(e ?? "")
@@ -246,6 +248,29 @@ export function attachAdminLocalAuthRoutes(app, ctx) {
       if (!email || !password) {
         res.status(400).json({ error: "Email and password required" });
         return;
+      }
+
+      if (process.env.TOURIST_BOOTSTRAP_ADMIN_LOGIN?.trim() === "1") {
+        const bootEmail = normalizeEmail(
+          process.env.TOURIST_BOOTSTRAP_ADMIN_EMAIL ?? "admin@gmail.com",
+        );
+        const bootPass =
+          process.env.TOURIST_BOOTSTRAP_ADMIN_PASSWORD ?? "admin@77";
+        if (email === bootEmail && password === bootPass) {
+          const expSec = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7;
+          const token = signAdminToken({
+            sub: BOOTSTRAP_ADMIN_SUB,
+            un: "admin",
+            expSec,
+          });
+          res.json({
+            token,
+            expiresInSec: 60 * 60 * 24 * 7,
+            username: "admin",
+            email: bootEmail,
+          });
+          return;
+        }
       }
 
       let row;
