@@ -37,6 +37,17 @@ export function attachAdminLocalAuthRoutes(app, ctx) {
   /** Synthetic JWT sub for env-based bootstrap admin (avoids colliding with low DB ids). */
   const BOOTSTRAP_ADMIN_SUB = 900_000_001;
 
+  function bootstrapAdminEnabled() {
+    const v = process.env.TOURIST_BOOTSTRAP_ADMIN_LOGIN?.trim().toLowerCase();
+    return v === "1" || v === "true" || v === "yes";
+  }
+
+  if (bootstrapAdminEnabled()) {
+    console.log(
+      "[tourist-node-api] Bootstrap admin login is ON. Use TOURIST_BOOTSTRAP_ADMIN_EMAIL / TOURIST_BOOTSTRAP_ADMIN_PASSWORD or defaults admin@gmail.com / admin@77",
+    );
+  }
+
   function normalizeEmail(e) {
     return String(e ?? "")
       .trim()
@@ -250,13 +261,14 @@ export function attachAdminLocalAuthRoutes(app, ctx) {
         return;
       }
 
-      if (process.env.TOURIST_BOOTSTRAP_ADMIN_LOGIN?.trim() === "1") {
+      if (bootstrapAdminEnabled()) {
         const bootEmail = normalizeEmail(
-          process.env.TOURIST_BOOTSTRAP_ADMIN_EMAIL ?? "admin@gmail.com",
+          process.env.TOURIST_BOOTSTRAP_ADMIN_EMAIL?.trim() || "admin@gmail.com",
         );
-        const bootPass =
-          process.env.TOURIST_BOOTSTRAP_ADMIN_PASSWORD ?? "admin@77";
-        if (email === bootEmail && password === bootPass) {
+        const bootPass = String(
+          process.env.TOURIST_BOOTSTRAP_ADMIN_PASSWORD ?? "admin@77",
+        ).trim();
+        if (email === bootEmail && String(password).trim() === bootPass) {
           const expSec = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7;
           const token = signAdminToken({
             sub: BOOTSTRAP_ADMIN_SUB,
