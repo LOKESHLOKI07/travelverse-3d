@@ -2,3 +2,5 @@ packages:
   - src/**/*
 onlyBuiltDependencies:
   - esbuild
+  - sharp
+  - "@biomejs/biome"
