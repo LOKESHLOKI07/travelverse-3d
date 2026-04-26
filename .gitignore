@@ -6,4 +6,5 @@ src/frontend/dist/
 src/frontend/src/declarations/backend.from-moc.did
 .env
 src/nodejs-backend/.env
+src/nodejs-backend/data/catalog-uploads/
 src/frontend/.env.development

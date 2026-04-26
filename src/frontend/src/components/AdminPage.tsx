@@ -318,18 +318,18 @@ export default function AdminPage({ setPage }: Props) {
         className="min-h-screen flex items-center justify-center px-4"
         style={{
           background:
-            "linear-gradient(160deg, oklch(0.13 0.025 232) 0%, oklch(0.09 0.018 232) 100%)",
+            "var(--app-page-gradient)",
         }}
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md p-8 rounded-2xl border border-white/10"
-          style={{ background: "oklch(0.16 0.025 232 / 0.8)" }}
+          className="w-full max-w-md p-8 rounded-2xl border border-border"
+          style={{ background: "oklch(0.99 0.006 248 / 0.88)" }}
         >
           <Shield
             className="w-12 h-12 mx-auto mb-4"
-            style={{ color: "oklch(0.85 0.13 192)" }}
+            style={{ color: "oklch(var(--brand-blue))" }}
           />
           <h2 className="font-display text-2xl font-bold mb-2 text-center">
             Admin sign-in
@@ -343,7 +343,7 @@ export default function AdminPage({ setPage }: Props) {
             <Button
               type="button"
               variant={localAuthTab === "login" ? "default" : "outline"}
-              className="flex-1 border-white/20"
+              className="flex-1 border-border"
               onClick={() => setLocalAuthTab("login")}
             >
               Log in
@@ -351,7 +351,7 @@ export default function AdminPage({ setPage }: Props) {
             <Button
               type="button"
               variant={localAuthTab === "register" ? "default" : "outline"}
-              className="flex-1 border-white/20"
+              className="flex-1 border-border"
               onClick={() => setLocalAuthTab("register")}
             >
               Register
@@ -367,7 +367,7 @@ export default function AdminPage({ setPage }: Props) {
                   autoComplete="email"
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  className="bg-background/40 border-white/15"
+                  className="bg-background/40 border-border"
                 />
               </div>
               <div className="space-y-2">
@@ -378,7 +378,7 @@ export default function AdminPage({ setPage }: Props) {
                   autoComplete="current-password"
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
-                  className="bg-background/40 border-white/15"
+                  className="bg-background/40 border-border"
                 />
               </div>
               <Button
@@ -387,8 +387,8 @@ export default function AdminPage({ setPage }: Props) {
                 disabled={localAuthBusy}
                 onClick={() => void submitLocalLogin()}
                 style={{
-                  background: "oklch(0.85 0.13 192)",
-                  color: "oklch(0.13 0.04 195)",
+                  background: "oklch(var(--brand-blue))",
+                  color: "oklch(0.985 0.005 85)",
                 }}
               >
                 {localAuthBusy ? (
@@ -410,7 +410,7 @@ export default function AdminPage({ setPage }: Props) {
                   placeholder="APP_ADMIN_TOKEN — required if an admin already exists"
                   value={regSetupToken}
                   onChange={(e) => setRegSetupToken(e.target.value)}
-                  className="bg-background/40 border-white/15"
+                  className="bg-background/40 border-border"
                 />
                 <p className="text-xs text-muted-foreground">
                   First admin: leave empty. Adding another admin: enter{" "}
@@ -430,12 +430,12 @@ export default function AdminPage({ setPage }: Props) {
                     setRegOtpSent(false);
                     setRegOtp("");
                   }}
-                  className="bg-background/40 border-white/15"
+                  className="bg-background/40 border-border"
                 />
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full border-white/20"
+                  className="w-full border-border"
                   disabled={localAuthBusy}
                   onClick={() => void sendRegistrationOtp()}
                 >
@@ -460,7 +460,7 @@ export default function AdminPage({ setPage }: Props) {
                   placeholder="6-digit code"
                   value={regOtp}
                   onChange={(e) => setRegOtp(e.target.value)}
-                  className="bg-background/40 border-white/15"
+                  className="bg-background/40 border-border"
                 />
               </div>
               <div className="space-y-2">
@@ -470,7 +470,7 @@ export default function AdminPage({ setPage }: Props) {
                   autoComplete="username"
                   value={regUsername}
                   onChange={(e) => setRegUsername(e.target.value)}
-                  className="bg-background/40 border-white/15"
+                  className="bg-background/40 border-border"
                 />
               </div>
               <div className="space-y-2">
@@ -481,7 +481,7 @@ export default function AdminPage({ setPage }: Props) {
                   autoComplete="new-password"
                   value={regPassword}
                   onChange={(e) => setRegPassword(e.target.value)}
-                  className="bg-background/40 border-white/15"
+                  className="bg-background/40 border-border"
                 />
               </div>
               <div className="space-y-2">
@@ -492,7 +492,7 @@ export default function AdminPage({ setPage }: Props) {
                   autoComplete="new-password"
                   value={regConfirm}
                   onChange={(e) => setRegConfirm(e.target.value)}
-                  className="bg-background/40 border-white/15"
+                  className="bg-background/40 border-border"
                 />
               </div>
               <Button
@@ -501,8 +501,8 @@ export default function AdminPage({ setPage }: Props) {
                 disabled={localAuthBusy}
                 onClick={() => void submitLocalRegister()}
                 style={{
-                  background: "oklch(0.85 0.13 192)",
-                  color: "oklch(0.13 0.04 195)",
+                  background: "oklch(var(--brand-blue))",
+                  color: "oklch(0.985 0.005 85)",
                 }}
               >
                 {localAuthBusy ? (
@@ -534,18 +534,18 @@ export default function AdminPage({ setPage }: Props) {
         className="min-h-screen flex items-center justify-center px-4"
         style={{
           background:
-            "linear-gradient(160deg, oklch(0.13 0.025 232) 0%, oklch(0.09 0.018 232) 100%)",
+            "var(--app-page-gradient)",
         }}
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md p-8 rounded-2xl border border-white/10"
-          style={{ background: "oklch(0.16 0.025 232 / 0.8)" }}
+          className="w-full max-w-md p-8 rounded-2xl border border-border"
+          style={{ background: "oklch(0.99 0.006 248 / 0.88)" }}
         >
           <Shield
             className="w-12 h-12 mx-auto mb-4"
-            style={{ color: "oklch(0.85 0.13 192)" }}
+            style={{ color: "oklch(var(--brand-blue))" }}
           />
           <h2 className="font-display text-2xl font-bold mb-2 text-center">
             Admin sign-in
@@ -571,8 +571,8 @@ export default function AdminPage({ setPage }: Props) {
             disabled={loginStatus === "logging-in"}
             onClick={() => login()}
             style={{
-              background: "oklch(0.85 0.13 192)",
-              color: "oklch(0.13 0.04 195)",
+              background: "oklch(var(--brand-blue))",
+              color: "oklch(0.985 0.005 85)",
             }}
           >
             {loginStatus === "logging-in" ? (
@@ -605,7 +605,7 @@ export default function AdminPage({ setPage }: Props) {
         className="min-h-screen flex flex-col items-center justify-center gap-3"
         style={{
           background:
-            "linear-gradient(160deg, oklch(0.13 0.025 232) 0%, oklch(0.09 0.018 232) 100%)",
+            "var(--app-page-gradient)",
         }}
       >
         <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
@@ -620,13 +620,13 @@ export default function AdminPage({ setPage }: Props) {
         className="min-h-screen flex items-center justify-center px-4"
         style={{
           background:
-            "linear-gradient(160deg, oklch(0.13 0.025 232) 0%, oklch(0.09 0.018 232) 100%)",
+            "var(--app-page-gradient)",
         }}
       >
         <div
           data-ocid="admin.error_state"
-          className="text-center p-8 rounded-2xl border border-white/10 max-w-md"
-          style={{ background: "oklch(0.16 0.025 232 / 0.8)" }}
+          className="text-center p-8 rounded-2xl border border-border max-w-md"
+          style={{ background: "oklch(0.99 0.006 248 / 0.88)" }}
         >
           <h2 className="font-display text-2xl font-bold mb-2">
             Access denied
@@ -659,7 +659,7 @@ export default function AdminPage({ setPage }: Props) {
             <Button
               type="button"
               variant="outline"
-              className="border-white/20"
+              className="border-border"
               disabled={isFetching}
               onClick={() => {
                 void queryClient.invalidateQueries({
@@ -676,8 +676,8 @@ export default function AdminPage({ setPage }: Props) {
               type="button"
               onClick={() => setPage("home")}
               style={{
-                background: "oklch(0.85 0.13 192)",
-                color: "oklch(0.13 0.04 195)",
+                background: "oklch(var(--brand-blue))",
+                color: "oklch(0.985 0.005 85)",
               }}
             >
               Back to Home
@@ -693,13 +693,13 @@ export default function AdminPage({ setPage }: Props) {
       className="min-h-screen"
       style={{
         background:
-          "linear-gradient(160deg, oklch(0.13 0.025 232) 0%, oklch(0.09 0.018 232) 100%)",
+          "var(--app-page-gradient)",
       }}
     >
       <header
-        className="sticky top-0 z-40 border-b border-white/10"
+        className="sticky top-0 z-40 border-b border-border"
         style={{
-          background: "oklch(0.11 0.025 232 / 0.95)",
+          background: "oklch(0.99 0.006 248 / 0.92)",
           backdropFilter: "blur(20px)",
         }}
       >
@@ -713,9 +713,9 @@ export default function AdminPage({ setPage }: Props) {
             <ArrowLeft className="w-4 h-4" />
             <span className="text-sm">Back</span>
           </button>
-          <div className="h-5 w-px bg-white/20" />
+          <div className="h-5 w-px bg-border" />
           <span className="font-display font-bold text-lg tracking-tight">
-            Admin <span style={{ color: "oklch(0.85 0.13 192)" }}>Panel</span>
+            Admin <span style={{ color: "oklch(var(--brand-blue))" }}>Panel</span>
           </span>
           <div className="ml-auto">
             <Button
@@ -723,7 +723,7 @@ export default function AdminPage({ setPage }: Props) {
               variant="outline"
               size="sm"
               data-ocid="admin.sign_out"
-              className="border-white/20 text-xs"
+              className="border-border text-xs"
               onClick={() => {
                 if (nodeBackend) {
                   setAdminBearerToken(null);
@@ -749,7 +749,7 @@ export default function AdminPage({ setPage }: Props) {
         >
           <TabsList
             className="mb-8 grid h-auto w-full max-w-md grid-cols-2 gap-2 p-1 sm:max-w-lg"
-            style={{ background: "oklch(0.16 0.025 232)" }}
+            style={{ background: "oklch(0.98 0.009 248)" }}
           >
             <TabsTrigger
               value="bookings"
@@ -774,7 +774,7 @@ export default function AdminPage({ setPage }: Props) {
             >
               <h1 className="font-display text-3xl font-black mb-2">
                 Bookings{" "}
-                <span style={{ color: "oklch(0.75 0.14 55)" }}>Management</span>
+                <span style={{ color: "oklch(var(--brand-coral))" }}>Management</span>
               </h1>
               <p className="text-muted-foreground">
                 View and manage all customer bookings.
@@ -815,13 +815,13 @@ export default function AdminPage({ setPage }: Props) {
                   className={
                     filter === value
                       ? "font-bold"
-                      : "border-white/20 bg-white/5 text-muted-foreground"
+                      : "border-border bg-muted/70 text-muted-foreground"
                   }
                   style={
                     filter === value
                       ? {
-                          background: "oklch(0.85 0.13 192)",
-                          color: "oklch(0.13 0.04 195)",
+                          background: "oklch(var(--brand-blue))",
+                          color: "oklch(0.985 0.005 85)",
                         }
                       : undefined
                   }
@@ -848,12 +848,12 @@ export default function AdminPage({ setPage }: Props) {
               </div>
             ) : (
               <div
-                className="rounded-2xl overflow-hidden border border-white/10"
-                style={{ background: "oklch(0.16 0.025 232 / 0.6)" }}
+                className="rounded-2xl overflow-hidden border border-border"
+                style={{ background: "oklch(0.98 0.008 248 / 0.72)" }}
               >
                 <Table data-ocid="admin.bookings.table">
                   <TableHeader>
-                    <TableRow className="border-white/10">
+                    <TableRow className="border-border">
                       <TableHead className="text-muted-foreground">
                         ID
                       </TableHead>
@@ -882,7 +882,7 @@ export default function AdminPage({ setPage }: Props) {
                       <TableRow
                         key={String(booking.bookingId)}
                         data-ocid={`admin.bookings.row.${idx + 1}`}
-                        className="border-white/10 hover:bg-white/5"
+                        className="border-border hover:bg-muted/50"
                       >
                         <TableCell className="font-mono text-xs text-muted-foreground">
                           #{String(booking.bookingId)}
@@ -906,7 +906,7 @@ export default function AdminPage({ setPage }: Props) {
                         </TableCell>
                         <TableCell
                           className="font-semibold text-sm"
-                          style={{ color: "oklch(0.85 0.13 192)" }}
+                          style={{ color: "oklch(var(--brand-blue))" }}
                         >
                           ₹
                           {Number(booking.totalPriceINR).toLocaleString(
@@ -918,7 +918,7 @@ export default function AdminPage({ setPage }: Props) {
                             style={{
                               background:
                                 STATUS_COLORS[booking.status] ??
-                                "oklch(0.5 0.05 232)",
+                                "oklch(0.52 0.055 228)",
                               color: "white",
                             }}
                           >
@@ -937,14 +937,14 @@ export default function AdminPage({ setPage }: Props) {
                             >
                               <SelectTrigger
                                 data-ocid={`admin.status.select.${idx + 1}`}
-                                className="w-32 h-8 text-xs bg-white/5 border-white/10"
+                                className="w-32 h-8 text-xs bg-muted/70 border-border"
                               >
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent
                                 style={{
-                                  background: "oklch(0.18 0.025 232)",
-                                  border: "1px solid oklch(0.3 0.04 232 / 0.5)",
+                                  background: "oklch(0.20 0.048 228)",
+                                  border: "1px solid oklch(0.88 0.02 248 / 0.6)",
                                 }}
                               >
                                 <SelectItem value="pending">Pending</SelectItem>
@@ -975,7 +975,7 @@ export default function AdminPage({ setPage }: Props) {
             >
               <h1 className="font-display text-3xl font-black mb-2">
                 Tour{" "}
-                <span style={{ color: "oklch(0.75 0.14 55)" }}>Catalog</span>
+                <span style={{ color: "oklch(var(--brand-coral))" }}>Catalog</span>
               </h1>
               <p className="text-muted-foreground">
                 Live catalog from the Node API or canister; built-in demo preview
@@ -987,7 +987,7 @@ export default function AdminPage({ setPage }: Props) {
         </Tabs>
       </div>
 
-      <footer className="text-center py-8 mt-16 text-xs text-muted-foreground border-t border-white/10">
+      <footer className="text-center py-8 mt-16 text-xs text-muted-foreground border-t border-border">
         <Mountain className="w-4 h-4 inline mr-1" />
         Mountain Explorers · © {new Date().getFullYear()} ·
         <a

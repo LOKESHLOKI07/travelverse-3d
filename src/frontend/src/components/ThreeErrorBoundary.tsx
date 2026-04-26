@@ -30,8 +30,8 @@ export default class ThreeErrorBoundary extends Component<Props, State> {
           <div
             className="w-full h-full flex items-center justify-center"
             style={{
-              background: "oklch(0.08 0.02 232)",
-              color: "oklch(0.6 0.05 232)",
+              background: "oklch(0.09 0.025 228)",
+              color: "oklch(0.62 0.05 228)",
               fontFamily: "sans-serif",
               fontSize: "0.9rem",
             }}

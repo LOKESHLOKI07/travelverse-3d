@@ -36,6 +36,7 @@ export const PrivateCfg = IDL.Record({
   maxGroupSize: IDL.Nat,
   pricing: PrivatePricing,
   addOns: IDL.Vec(AddOnDef),
+  itineraryDays: IDL.Vec(IDL.Text),
 });
 export const FixedBatch = IDL.Record({
   batchId: IDL.Nat,
@@ -47,6 +48,7 @@ export const FixedCfg = IDL.Record({
   pricePerPersonINR: IDL.Nat,
   batches: IDL.Vec(FixedBatch),
   addOns: IDL.Vec(AddOnDef),
+  inclusions: IDL.Vec(IDL.Text),
 });
 export const PackageDetail = IDL.Variant({
   private: PrivateCfg,
@@ -183,6 +185,7 @@ function buildTypes(IDL) {
     maxGroupSize: IDL.Nat,
     pricing: PrivatePricing,
     addOns: IDL.Vec(AddOnDef),
+    itineraryDays: IDL.Vec(IDL.Text),
   });
   const FixedBatch = IDL.Record({
     batchId: IDL.Nat,
@@ -194,6 +197,7 @@ function buildTypes(IDL) {
     pricePerPersonINR: IDL.Nat,
     batches: IDL.Vec(FixedBatch),
     addOns: IDL.Vec(AddOnDef),
+    inclusions: IDL.Vec(IDL.Text),
   });
   const PackageDetail = IDL.Variant({
     private: PrivateCfg,

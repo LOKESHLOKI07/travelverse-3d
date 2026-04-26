@@ -6,6 +6,7 @@
   "scripts": {
     "predev": "node ../../scripts/sync-frontend-public-assets.js",
     "dev": "vite",
+    "dev:force": "vite --force",
     "postbuild": "node ../../scripts/sync-frontend-public-assets.js",
     "build:skip-bindings": "vite build && pnpm copy:env",
     "build": "vite build && pnpm copy:env",

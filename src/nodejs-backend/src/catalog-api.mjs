@@ -10,6 +10,7 @@ import {
   findBatch,
   takeSeatsFromBatch,
 } from "./catalog-core.mjs";
+import { debugCatalogMedia } from "./tourist-debug.mjs";
 
 /**
  * @param {import("express").Express} app
@@ -102,9 +103,28 @@ export function attachCatalogRoutes(app, ctx) {
       if (!(await isAdminRequest(req))) {
         return res.status(403).json({ error: "Unauthorized" });
       }
+      const body = req.body && typeof req.body === "object" ? req.body : {};
+      if (debugCatalogMedia()) {
+        console.log("[tourist-debug][catalog] PUT /catalog/admin/package (incoming)", {
+          id: body.id,
+          name: body.name,
+          heroImageUrl: body.heroImageUrl,
+          thumbnailUrl: body.thumbnailUrl,
+          listingKind: body.listingKind,
+        });
+      }
       const id = await catalog.insertPackageRecord(req.body);
+      if (debugCatalogMedia()) {
+        console.log("[tourist-debug][catalog] package row id after save:", id);
+      }
       res.json({ id });
     } catch (e) {
+      if (debugCatalogMedia()) {
+        console.warn(
+          "[tourist-debug][catalog] PUT /catalog/admin/package failed:",
+          String(e?.message || e),
+        );
+      }
       res.status(400).json({ error: String(e.message || e) });
     }
   });

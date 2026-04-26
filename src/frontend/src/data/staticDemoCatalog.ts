@@ -78,6 +78,14 @@ export function getStaticDemoCatalogViews(): CategoryView[] {
               maxGroupSize: 20n,
               pricing: { multi: { tiers } },
               addOns: privateAddOns,
+              itineraryDays: [
+                "Arrive Chandigarh, drive to Manali. Evening walk on Mall Road.",
+                "Cross Rohtang / Atal Tunnel, reach Kaza. Acclimatisation evening.",
+                "Pin Valley monastery visit, village walk, overnight in Kaza.",
+                "Chandratal Lake day excursion; camp or guesthouse.",
+                "Return leg via Kunzum La; night near Manali.",
+                "Departure after breakfast.",
+              ],
             },
           },
         }),
@@ -96,6 +104,14 @@ export function getStaticDemoCatalogViews(): CategoryView[] {
               maxGroupSize: 20n,
               pricing: { multi: { tiers } },
               addOns: privateAddOns,
+              itineraryDays: [
+                "Fly to Leh, rest and light acclimatisation. Oxygen on standby.",
+                "Sham Valley monasteries: Likir, Alchi, Magnetic Hill.",
+                "Khardung La and Nubra Valley; double-hump camel ride (optional).",
+                "Pangong Tso full day; lakeside stay.",
+                "Return to Leh via Chang La; evening bazaar.",
+                "Leh palace & Shanti Stupa; departure.",
+              ],
             },
           },
         }),
@@ -126,6 +142,12 @@ export function getStaticDemoCatalogViews(): CategoryView[] {
                 batch(1003, "Jun 1, 2026", 2, 2),
               ],
               addOns: [],
+              inclusions: [
+                "Hotel stay (twin sharing)",
+                "Daily breakfast",
+                "AC vehicle for sightseeing",
+                "English-speaking guide",
+              ],
             },
           },
         }),
@@ -145,6 +167,12 @@ export function getStaticDemoCatalogViews(): CategoryView[] {
                 batch(1005, "May 20, 2026", 12, 12),
               ],
               addOns: [],
+              inclusions: [
+                "Houseboat stay with meals",
+                "Airport / station transfers",
+                "Shikara ride",
+                "All taxes as per itinerary",
+              ],
             },
           },
         }),
@@ -165,6 +193,12 @@ export function getStaticDemoCatalogViews(): CategoryView[] {
                 batch(1008, "Jun 10, 2026", 5, 5),
               ],
               addOns: [],
+              inclusions: [
+                "Heritage hotels & haveli stays",
+                "Breakfast daily; select dinners",
+                "Private vehicle with driver",
+                "Monument entry fees (as listed)",
+              ],
             },
           },
         }),
@@ -185,7 +219,7 @@ export function getStaticDemoCatalogViews(): CategoryView[] {
           shortDescription: "8 Days · 5,289m · Moderate-Hard",
           heroImageUrl:
             "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&fit=crop",
-          longDescription: "difficultyColor:oklch(0.75 0.14 55)",
+          longDescription: "difficultyColor:oklch(var(--brand-coral))",
           listingKind: "trek",
           detail: {
             fixed: {
@@ -196,6 +230,12 @@ export function getStaticDemoCatalogViews(): CategoryView[] {
                 batch(1103, "Sep 1, 2026", 8, 8),
               ],
               addOns: [],
+              inclusions: [
+                "Certified mountain guide",
+                "Camping equipment (tents, sleeping bags)",
+                "All meals on trek",
+                "Permits & forest fees",
+              ],
             },
           },
         }),
@@ -206,7 +246,7 @@ export function getStaticDemoCatalogViews(): CategoryView[] {
           shortDescription: "5 Days · 4,270m · Moderate",
           heroImageUrl:
             "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&fit=crop",
-          longDescription: "difficultyColor:oklch(0.85 0.13 192)",
+          longDescription: "difficultyColor:oklch(var(--brand-blue))",
           listingKind: "trek",
           detail: {
             fixed: {
@@ -216,6 +256,12 @@ export function getStaticDemoCatalogViews(): CategoryView[] {
                 batch(1105, "May 15, 2026", 8, 8),
               ],
               addOns: [],
+              inclusions: [
+                "Experienced trek lead",
+                "Shared camp stays",
+                "Meals during trek",
+                "Transport from base village",
+              ],
             },
           },
         }),
@@ -236,6 +282,12 @@ export function getStaticDemoCatalogViews(): CategoryView[] {
                 batch(1107, "Jan 10, 2027", 6, 6),
               ],
               addOns: [],
+              inclusions: [
+                "Local guide",
+                "Tented accommodation",
+                "Meals on trek",
+                "Safety & first-aid support",
+              ],
             },
           },
         }),
@@ -256,7 +308,8 @@ export function getStaticDemoCatalogViews(): CategoryView[] {
           shortDescription: "Manali, Himachal Pradesh",
           heroImageUrl:
             "https://images.unsplash.com/photo-1455587734955-081b22074882?w=600&fit=crop",
-          longDescription: "rating:4.8",
+          longDescription:
+            "rating:4.8\n\nSpa, heated pool, and oak-panelled lounge. Most rooms face the peaks; the restaurant serves regional and continental menus. 24-hour desk and paid airport transfers.",
           listingKind: "hotel",
           detail: {
             private: {
@@ -272,6 +325,7 @@ export function getStaticDemoCatalogViews(): CategoryView[] {
                 },
               },
               addOns: [],
+              itineraryDays: [],
             },
           },
         }),
@@ -282,7 +336,8 @@ export function getStaticDemoCatalogViews(): CategoryView[] {
           shortDescription: "Shimla, Himachal Pradesh",
           heroImageUrl:
             "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&fit=crop",
-          longDescription: "rating:4.6",
+          longDescription:
+            "rating:4.6\n\nColonial-era building with valley-facing balconies. In-house café, guided nature walks, and a kids' activity room. EV charging and laundry on request.",
           listingKind: "hotel",
           detail: {
             private: {
@@ -298,6 +353,7 @@ export function getStaticDemoCatalogViews(): CategoryView[] {
                 },
               },
               addOns: [],
+              itineraryDays: [],
             },
           },
         }),
@@ -329,6 +385,7 @@ export function getStaticDemoCatalogViews(): CategoryView[] {
               maxGroupSize: 15n,
               pricing: { single: { pricePerPersonINR: 1200n } },
               addOns: [],
+              itineraryDays: [],
             },
           },
         }),
@@ -350,6 +407,7 @@ export function getStaticDemoCatalogViews(): CategoryView[] {
               maxGroupSize: 20n,
               pricing: { single: { pricePerPersonINR: 900n } },
               addOns: [],
+              itineraryDays: [],
             },
           },
         }),

@@ -4,6 +4,7 @@ import {
   jsonBigIntReplacer,
 } from "./catalog-core.mjs";
 import { createMemoryCatalogStore } from "./catalog-store-memory.mjs";
+import { debugCatalogMedia } from "./tourist-debug.mjs";
 
 /**
  * @param {import('pg').Pool} pool
@@ -115,6 +116,14 @@ export function createPgCatalogStore(pool) {
 
     async insertPackageRecord(pkg) {
       const norm = normalizePackage(pkg);
+      if (debugCatalogMedia()) {
+        console.log("[tourist-debug][catalog-store-pg] normalized (will persist in body JSONB)", {
+          id: norm.id,
+          heroImageUrl: norm.heroImageUrl,
+          thumbnailUrl: norm.thumbnailUrl,
+          listingKind: norm.listingKind,
+        });
+      }
       if (norm.id === 0) {
         const r = await pool.query(
           `INSERT INTO catalog_packages (category_id, body) VALUES ($1, '{}'::jsonb) RETURNING id`,

@@ -47,14 +47,14 @@ export default function UserAccountPage({ setPage }: Props) {
         className="min-h-screen flex items-center justify-center px-4"
         style={{
           background:
-            "linear-gradient(160deg, oklch(0.13 0.025 232) 0%, oklch(0.09 0.018 232) 100%)",
+            "var(--app-page-gradient)",
         }}
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md p-8 rounded-2xl border border-white/10 text-center"
-          style={{ background: "oklch(0.16 0.025 232 / 0.8)" }}
+          className="w-full max-w-md p-8 rounded-2xl border border-border text-center"
+          style={{ background: "oklch(0.99 0.006 248 / 0.88)" }}
         >
           <p className="text-muted-foreground mb-4">
             Email sign-in is only available when the app uses the Node API backend.
@@ -202,18 +202,18 @@ export default function UserAccountPage({ setPage }: Props) {
         className="min-h-screen flex items-center justify-center px-4"
         style={{
           background:
-            "linear-gradient(160deg, oklch(0.13 0.025 232) 0%, oklch(0.09 0.018 232) 100%)",
+            "var(--app-page-gradient)",
         }}
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md p-8 rounded-2xl border border-white/10"
-          style={{ background: "oklch(0.16 0.025 232 / 0.8)" }}
+          className="w-full max-w-md p-8 rounded-2xl border border-border"
+          style={{ background: "oklch(0.99 0.006 248 / 0.88)" }}
         >
           <User
             className="w-12 h-12 mx-auto mb-4"
-            style={{ color: "oklch(0.85 0.13 192)" }}
+            style={{ color: "oklch(var(--brand-blue))" }}
           />
           <h2 className="font-display text-2xl font-bold mb-2 text-center">
             You&apos;re signed in
@@ -228,8 +228,8 @@ export default function UserAccountPage({ setPage }: Props) {
               disabled={isFetching}
               onClick={() => setPage("my-bookings")}
               style={{
-                background: "oklch(0.85 0.13 192)",
-                color: "oklch(0.13 0.04 195)",
+                background: "oklch(var(--brand-blue))",
+                color: "oklch(0.985 0.005 85)",
               }}
             >
               My bookings
@@ -237,7 +237,7 @@ export default function UserAccountPage({ setPage }: Props) {
             <Button
               type="button"
               variant="outline"
-              className="w-full border-white/20"
+              className="w-full border-border"
               onClick={() => void logout()}
             >
               Sign out
@@ -263,18 +263,18 @@ export default function UserAccountPage({ setPage }: Props) {
       className="min-h-screen flex items-center justify-center px-4"
       style={{
         background:
-          "linear-gradient(160deg, oklch(0.13 0.025 232) 0%, oklch(0.09 0.018 232) 100%)",
+          "var(--app-page-gradient)",
       }}
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-md p-8 rounded-2xl border border-white/10"
-        style={{ background: "oklch(0.16 0.025 232 / 0.8)" }}
+        className="w-full max-w-md p-8 rounded-2xl border border-border"
+        style={{ background: "oklch(0.99 0.006 248 / 0.88)" }}
       >
         <User
           className="w-12 h-12 mx-auto mb-4"
-          style={{ color: "oklch(0.85 0.13 192)" }}
+          style={{ color: "oklch(var(--brand-blue))" }}
         />
         <h2 className="font-display text-2xl font-bold mb-2 text-center">
           Traveler account
@@ -287,7 +287,7 @@ export default function UserAccountPage({ setPage }: Props) {
           <Button
             type="button"
             variant={localAuthTab === "login" ? "default" : "outline"}
-            className="flex-1 border-white/20"
+            className="flex-1 border-border"
             onClick={() => setLocalAuthTab("login")}
           >
             Log in
@@ -295,7 +295,7 @@ export default function UserAccountPage({ setPage }: Props) {
           <Button
             type="button"
             variant={localAuthTab === "register" ? "default" : "outline"}
-            className="flex-1 border-white/20"
+            className="flex-1 border-border"
             onClick={() => setLocalAuthTab("register")}
           >
             Register
@@ -311,7 +311,7 @@ export default function UserAccountPage({ setPage }: Props) {
                 autoComplete="email"
                 value={loginEmail}
                 onChange={(e) => setLoginEmail(e.target.value)}
-                className="bg-background/40 border-white/15"
+                className="bg-background/40 border-border"
               />
             </div>
             <div className="space-y-2">
@@ -322,7 +322,7 @@ export default function UserAccountPage({ setPage }: Props) {
                 autoComplete="current-password"
                 value={loginPassword}
                 onChange={(e) => setLoginPassword(e.target.value)}
-                className="bg-background/40 border-white/15"
+                className="bg-background/40 border-border"
               />
             </div>
             <Button
@@ -331,8 +331,8 @@ export default function UserAccountPage({ setPage }: Props) {
               disabled={localAuthBusy}
               onClick={() => void submitLocalLogin()}
               style={{
-                background: "oklch(0.85 0.13 192)",
-                color: "oklch(0.13 0.04 195)",
+                background: "oklch(var(--brand-blue))",
+                color: "oklch(0.985 0.005 85)",
               }}
             >
               {localAuthBusy ? (
@@ -356,12 +356,12 @@ export default function UserAccountPage({ setPage }: Props) {
                   setRegOtpSent(false);
                   setRegOtp("");
                 }}
-                className="bg-background/40 border-white/15"
+                className="bg-background/40 border-border"
               />
               <Button
                 type="button"
                 variant="outline"
-                className="w-full border-white/20"
+                className="w-full border-border"
                 disabled={localAuthBusy}
                 onClick={() => void sendRegistrationOtp()}
               >
@@ -385,7 +385,7 @@ export default function UserAccountPage({ setPage }: Props) {
                 placeholder="6-digit code"
                 value={regOtp}
                 onChange={(e) => setRegOtp(e.target.value)}
-                className="bg-background/40 border-white/15"
+                className="bg-background/40 border-border"
               />
             </div>
             <div className="space-y-2">
@@ -395,7 +395,7 @@ export default function UserAccountPage({ setPage }: Props) {
                 autoComplete="username"
                 value={regUsername}
                 onChange={(e) => setRegUsername(e.target.value)}
-                className="bg-background/40 border-white/15"
+                className="bg-background/40 border-border"
               />
             </div>
             <div className="space-y-2">
@@ -406,7 +406,7 @@ export default function UserAccountPage({ setPage }: Props) {
                 autoComplete="new-password"
                 value={regPassword}
                 onChange={(e) => setRegPassword(e.target.value)}
-                className="bg-background/40 border-white/15"
+                className="bg-background/40 border-border"
               />
             </div>
             <div className="space-y-2">
@@ -417,7 +417,7 @@ export default function UserAccountPage({ setPage }: Props) {
                 autoComplete="new-password"
                 value={regConfirm}
                 onChange={(e) => setRegConfirm(e.target.value)}
-                className="bg-background/40 border-white/15"
+                className="bg-background/40 border-border"
               />
             </div>
             <Button
@@ -426,8 +426,8 @@ export default function UserAccountPage({ setPage }: Props) {
               disabled={localAuthBusy}
               onClick={() => void submitLocalRegister()}
               style={{
-                background: "oklch(0.85 0.13 192)",
-                color: "oklch(0.13 0.04 195)",
+                background: "oklch(var(--brand-blue))",
+                color: "oklch(0.985 0.005 85)",
               }}
             >
               {localAuthBusy ? (

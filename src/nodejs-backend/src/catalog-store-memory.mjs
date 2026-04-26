@@ -6,6 +6,7 @@ import {
   findBatch,
   takeSeatsFromBatch,
 } from "./catalog-core.mjs";
+import { debugCatalogMedia } from "./tourist-debug.mjs";
 
 export function createMemoryCatalogStore() {
   const categories = new Map();
@@ -30,6 +31,14 @@ export function createMemoryCatalogStore() {
 
   function insertPackageRecord(pkg) {
     const norm = normalizePackage(pkg);
+    if (debugCatalogMedia()) {
+      console.log("[tourist-debug][catalog-store-memory] normalized", {
+        id: norm.id,
+        heroImageUrl: norm.heroImageUrl,
+        thumbnailUrl: norm.thumbnailUrl,
+        listingKind: norm.listingKind,
+      });
+    }
     if (norm.id === 0) {
       const id = nextPackageId++;
       const withId = { ...norm, id };
@@ -139,6 +148,14 @@ export function createMemoryCatalogStore() {
           maxGroupSize: 20,
           pricing: { multi: { tiers } },
           addOns: privateAddOns,
+          itineraryDays: [
+            "Arrive Chandigarh, drive to Manali. Evening walk on Mall Road.",
+            "Cross Rohtang / Atal Tunnel, reach Kaza. Acclimatisation evening.",
+            "Pin Valley monastery visit, village walk, overnight in Kaza.",
+            "Chandratal Lake day excursion; camp or guesthouse.",
+            "Return leg via Kunzum La; night near Manali.",
+            "Departure after breakfast.",
+          ],
         },
       },
     });
@@ -159,6 +176,14 @@ export function createMemoryCatalogStore() {
           maxGroupSize: 20,
           pricing: { multi: { tiers } },
           addOns: privateAddOns,
+          itineraryDays: [
+            "Fly to Leh, rest and light acclimatisation. Oxygen on standby.",
+            "Sham Valley monasteries: Likir, Alchi, Magnetic Hill.",
+            "Khardung La and Nubra Valley; double-hump camel ride (optional).",
+            "Pangong Tso full day; lakeside stay.",
+            "Return to Leh via Chang La; evening bazaar.",
+            "Leh palace & Shanti Stupa; departure.",
+          ],
         },
       },
     });
@@ -181,6 +206,12 @@ export function createMemoryCatalogStore() {
             mkBatch("Jun 1, 2026", 2, 2),
           ],
           addOns: [],
+          inclusions: [
+            "Hotel stay (twin sharing)",
+            "Daily breakfast",
+            "AC vehicle for sightseeing",
+            "English-speaking guide",
+          ],
         },
       },
     });
@@ -202,6 +233,12 @@ export function createMemoryCatalogStore() {
             mkBatch("May 20, 2026", 12, 12),
           ],
           addOns: [],
+          inclusions: [
+            "Houseboat stay with meals",
+            "Airport / station transfers",
+            "Shikara ride",
+            "All taxes as per itinerary",
+          ],
         },
       },
     });
@@ -224,6 +261,12 @@ export function createMemoryCatalogStore() {
             mkBatch("Jun 10, 2026", 5, 5),
           ],
           addOns: [],
+          inclusions: [
+            "Heritage hotels & haveli stays",
+            "Breakfast daily; select dinners",
+            "Private vehicle with driver",
+            "Monument entry fees (as listed)",
+          ],
         },
       },
     });
@@ -247,6 +290,12 @@ export function createMemoryCatalogStore() {
             mkBatch("Sep 1, 2026", 8, 8),
           ],
           addOns: [],
+          inclusions: [
+            "Certified mountain guide",
+            "Camping equipment (tents, sleeping bags)",
+            "All meals on trek",
+            "Permits & forest fees",
+          ],
         },
       },
     });
@@ -269,6 +318,12 @@ export function createMemoryCatalogStore() {
             mkBatch("May 15, 2026", 8, 8),
           ],
           addOns: [],
+          inclusions: [
+            "Experienced trek lead",
+            "Shared camp stays",
+            "Meals during trek",
+            "Transport from base village",
+          ],
         },
       },
     });
@@ -291,6 +346,12 @@ export function createMemoryCatalogStore() {
             mkBatch("Jan 10, 2027", 6, 6),
           ],
           addOns: [],
+          inclusions: [
+            "Local guide",
+            "Tented accommodation",
+            "Meals on trek",
+            "Safety & first-aid support",
+          ],
         },
       },
     });
@@ -302,7 +363,8 @@ export function createMemoryCatalogStore() {
       shortDescription: "Manali, Himachal Pradesh",
       heroImageUrl:
         "https://images.unsplash.com/photo-1455587734955-081b22074882?w=600&fit=crop",
-      longDescription: "rating:4.8",
+      longDescription:
+        "rating:4.8\n\nSpa, heated pool, and oak-panelled lounge. Most rooms face the peaks; the restaurant serves regional and continental menus. 24-hour desk and paid airport transfers.",
       listingKind: "hotel",
       active: true,
       detail: {
@@ -319,6 +381,7 @@ export function createMemoryCatalogStore() {
             },
           },
           addOns: [],
+          itineraryDays: [],
         },
       },
     });
@@ -330,7 +393,8 @@ export function createMemoryCatalogStore() {
       shortDescription: "Shimla, Himachal Pradesh",
       heroImageUrl:
         "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&fit=crop",
-      longDescription: "rating:4.6",
+      longDescription:
+        "rating:4.6\n\nColonial-era building with valley-facing balconies. In-house café, guided nature walks, and a kids' activity room. EV charging and laundry on request.",
       listingKind: "hotel",
       active: true,
       detail: {
@@ -347,6 +411,7 @@ export function createMemoryCatalogStore() {
             },
           },
           addOns: [],
+          itineraryDays: [],
         },
       },
     });
@@ -370,6 +435,7 @@ export function createMemoryCatalogStore() {
           maxGroupSize: 15,
           pricing: { single: { pricePerPersonINR: 1200 } },
           addOns: [],
+          itineraryDays: [],
         },
       },
     });
@@ -393,6 +459,7 @@ export function createMemoryCatalogStore() {
           maxGroupSize: 20,
           pricing: { single: { pricePerPersonINR: 900 } },
           addOns: [],
+          itineraryDays: [],
         },
       },
     });

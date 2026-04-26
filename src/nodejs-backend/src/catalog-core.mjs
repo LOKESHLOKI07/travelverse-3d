@@ -68,6 +68,7 @@ export function normalizePackage(raw) {
             label: String(a.label),
             priceINR: n(a.priceINR),
           })),
+          itineraryDays: (p.itineraryDays ?? []).map((line) => String(line)),
         },
       },
     };
@@ -96,6 +97,7 @@ export function normalizePackage(raw) {
             label: String(a.label),
             priceINR: n(a.priceINR),
           })),
+          inclusions: (f.inclusions ?? []).map((line) => String(line)),
         },
       },
     };

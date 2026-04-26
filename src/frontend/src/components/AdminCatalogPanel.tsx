@@ -30,12 +30,15 @@ import {
 } from "@/hooks/useActor";
 import { useInternetIdentity } from "@/hooks/useInternetIdentity";
 import { useQueryClient } from "@tanstack/react-query";
+import { Principal } from "@icp-sdk/core/principal";
 import { Loader2, Plus, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { backendInterface, CategoryView, TourPackage } from "../backend";
 import { getStaticDemoCatalogViews } from "../data/staticDemoCatalog";
 import { viteEnvIsTrue } from "../utils/viteEnv";
+import { debugCatalogClient } from "../utils/catalogDebug";
+import { uploadCatalogImage } from "../utils/catalogImageUpload";
 import {
   type ListingKind,
   getListingKind,
@@ -54,6 +57,7 @@ type BatchRow = {
   remaining: string;
 };
 type AddOnRow = { rowKey: string; id: string; label: string; price: string };
+type ItineraryDayRow = { rowKey: string; text: string };
 
 function newRowKey(): string {
   return globalThis.crypto.randomUUID();
@@ -79,6 +83,41 @@ export default function AdminCatalogPanel() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
   const { identity } = useInternetIdentity();
+
+  const heroFileRef = useRef<HTMLInputElement>(null);
+  const thumbFileRef = useRef<HTMLInputElement>(null);
+  const [uploadingHeroImg, setUploadingHeroImg] = useState(false);
+  const [uploadingThumbImg, setUploadingThumbImg] = useState(false);
+
+  const handleCatalogImageUpload = useCallback(
+    async (
+      file: File | undefined,
+      setUrl: (s: string) => void,
+      setBusy: (b: boolean) => void,
+    ) => {
+      if (!file) return;
+      setBusy(true);
+      try {
+        const getPrincipalText = () =>
+          identity?.getPrincipal()?.toText() ??
+          Principal.anonymous().toText();
+        const url = await uploadCatalogImage(file, getPrincipalText);
+        if (debugCatalogClient()) {
+          console.log(
+            "[tourist-debug][admin] image field set from upload (save package to persist):",
+            url,
+          );
+        }
+        setUrl(url);
+        toast.success("Image uploaded");
+      } catch (e) {
+        toastCatalogMutationError("Upload image", e);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [identity],
+  );
 
   /** Backend handle for mutations when React Query has not committed `actor` yet. */
   const resolveActor =
@@ -207,7 +246,10 @@ export default function AdminCatalogPanel() {
   const [pkgDesc, setPkgDesc] = useState("");
   const [pkgImg, setPkgImg] = useState("");
   const [pkgThumbnail, setPkgThumbnail] = useState("");
+  /** Full narrative: hotels, villas & farm stays only (Node catalog). */
   const [pkgLongDesc, setPkgLongDesc] = useState("");
+  /** Trek card accent line, e.g. difficultyColor:oklch(...). */
+  const [trekListingMeta, setTrekListingMeta] = useState("");
   const [pkgActive, setPkgActive] = useState(true);
   /** Where the package appears in the main nav (Private / Fixed / Villas). */
   const [listingKind, setListingKind] = useState<ListingKind>("private");
@@ -225,8 +267,12 @@ export default function AdminCatalogPanel() {
     { rowKey: newRowKey(), id: "2", label: "Paragliding", price: "2500" },
   ]);
   const [fixedPrice, setFixedPrice] = useState("12500");
+  const [fixedInclusions, setFixedInclusions] = useState("");
   const [batches, setBatches] = useState<BatchRow[]>([
     { rowKey: newRowKey(), date: "", total: "10", remaining: "10" },
+  ]);
+  const [itineraryDays, setItineraryDays] = useState<ItineraryDayRow[]>([
+    { rowKey: newRowKey(), text: "" },
   ]);
   const [savingPkg, setSavingPkg] = useState(false);
 
@@ -252,6 +298,10 @@ export default function AdminCatalogPanel() {
       { rowKey: newRowKey(), id: "1", label: "Add-on", price: "500" },
     ]);
     setFixedPrice("12500");
+    setFixedInclusions("");
+    setPkgLongDesc("");
+    setTrekListingMeta("");
+    setItineraryDays([{ rowKey: newRowKey(), text: "" }]);
     setBatches([{ rowKey: newRowKey(), date: "", total: "8", remaining: "8" }]);
     setDlgOpen(true);
   };
@@ -302,11 +352,16 @@ export default function AdminCatalogPanel() {
       setPkgImg(tp.heroImageUrl);
       const tl = tp as TourPackageListing;
       setPkgThumbnail(String(tl.thumbnailUrl ?? ""));
-      setPkgLongDesc(tl.longDescription ?? "");
       setPkgActive(tp.active);
-      setListingKind(getListingKind(tp));
+      const lk = getListingKind(tp);
+      setListingKind(lk);
+      setPkgLongDesc(
+        lk === "hotel" || lk === "villa" ? (tl.longDescription ?? "") : "",
+      );
+      setTrekListingMeta(lk === "trek" ? (tl.longDescription ?? "") : "");
       if ("private" in tp.detail) {
         setFixedPrice("12500");
+        setFixedInclusions("");
         setBatches([
           { rowKey: newRowKey(), date: "", total: "8", remaining: "8" },
         ]);
@@ -334,6 +389,19 @@ export default function AdminCatalogPanel() {
             price: String(a.priceINR),
           })),
         );
+        if (lk === "private") {
+          const days = tp.detail.private.itineraryDays ?? [];
+          setItineraryDays(
+            days.length > 0
+              ? days.map((t) => ({
+                  rowKey: newRowKey(),
+                  text: String(t),
+                }))
+              : [{ rowKey: newRowKey(), text: "" }],
+          );
+        } else {
+          setItineraryDays([{ rowKey: newRowKey(), text: "" }]);
+        }
       } else {
         setPriceKind("multi");
         setMinG("1");
@@ -361,6 +429,10 @@ export default function AdminCatalogPanel() {
             remaining: String(b.seatsRemaining),
           })),
         );
+        setFixedInclusions(
+          (tp.detail.fixed.inclusions ?? []).join("\n"),
+        );
+        setItineraryDays([{ rowKey: newRowKey(), text: "" }]);
       }
       setDlgOpen(true);
     } catch {
@@ -376,6 +448,15 @@ export default function AdminCatalogPanel() {
     }
     if (!pkgName.trim() || !pkgCatId) {
       toast.error("Name and category required");
+      return;
+    }
+    if (
+      (listingKind === "hotel" || listingKind === "villa") &&
+      !pkgLongDesc.trim()
+    ) {
+      toast.error(
+        "Full description is required for hotels, villas, and farm stays.",
+      );
       return;
     }
     setSavingPkg(true);
@@ -411,12 +492,17 @@ export default function AdminCatalogPanel() {
                   })),
                 },
               };
+        const itineraryForSave =
+          listingKind === "private"
+            ? itineraryDays.map((r) => r.text.trim()).filter(Boolean)
+            : [];
         detail = {
           private: {
             minGroupSize: BigInt(minG || "1"),
             maxGroupSize: BigInt(maxG || "1"),
             pricing,
             addOns: ao,
+            itineraryDays: itineraryForSave,
           },
         };
       } else {
@@ -455,11 +541,16 @@ export default function AdminCatalogPanel() {
           label: a.label,
           priceINR: BigInt(a.price || "0"),
         }));
+        const inclusionLines = fixedInclusions
+          .split("\n")
+          .map((s) => s.trim())
+          .filter(Boolean);
         detail = {
           fixed: {
             pricePerPersonINR: BigInt(fixedPrice || "0"),
             batches: batchTuples,
             addOns: ao,
+            inclusions: inclusionLines,
           },
         };
       }
@@ -472,13 +563,28 @@ export default function AdminCatalogPanel() {
         active: pkgActive,
         detail,
       };
+      const longDescriptionForSave =
+        listingKind === "hotel" || listingKind === "villa"
+          ? pkgLongDesc.trim()
+          : listingKind === "trek"
+            ? trekListingMeta.trim()
+            : "";
+
       const useNodeBackend = viteEnvIsTrue(import.meta.env.VITE_USE_NODE_BACKEND);
       if (useNodeBackend) {
         const thumb = pkgThumbnail.trim();
+        if (debugCatalogClient()) {
+          console.log("[tourist-debug][admin] adminPutPackage payload (Node)", {
+            effectiveId: String(effectiveId),
+            heroImageUrl: tour.heroImageUrl,
+            thumbnailUrl: thumb || "(empty — field omitted in JSON)",
+            listingKind,
+          });
+        }
         await backend.adminPutPackage({
           ...tour,
           listingKind,
-          longDescription: pkgLongDesc,
+          longDescription: longDescriptionForSave,
           ...(thumb ? { thumbnailUrl: thumb } : {}),
         } as TourPackage);
       } else {
@@ -517,7 +623,7 @@ export default function AdminCatalogPanel() {
           type="button"
           variant="outline"
           size="sm"
-          className="border-white/20 bg-white/5"
+          className="border-border bg-muted/70"
           disabled={seedingCatalog}
           onClick={async () => {
             const backend = await resolveActor();
@@ -601,8 +707,8 @@ export default function AdminCatalogPanel() {
               : undefined
           }
           style={{
-            background: "oklch(0.85 0.13 192)",
-            color: "oklch(0.13 0.04 195)",
+            background: "oklch(var(--brand-blue))",
+            color: "oklch(0.985 0.005 85)",
           }}
         >
           <Plus className="mr-1 h-4 w-4" />
@@ -620,8 +726,8 @@ export default function AdminCatalogPanel() {
       </div>
 
       <section
-        className="rounded-2xl border border-white/10 p-6"
-        style={{ background: "oklch(0.16 0.025 232 / 0.6)" }}
+        className="rounded-2xl border border-border p-6"
+        style={{ background: "oklch(0.98 0.008 248 / 0.72)" }}
       >
         <h2 className="font-display text-xl font-bold mb-4">Categories</h2>
         {loading ? (
@@ -629,7 +735,7 @@ export default function AdminCatalogPanel() {
         ) : (
           <Table>
             <TableHeader>
-              <TableRow className="border-white/10">
+              <TableRow className="border-border">
                 <TableHead>ID</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Sort</TableHead>
@@ -641,7 +747,7 @@ export default function AdminCatalogPanel() {
               {views.map((v) => (
                 <TableRow
                   key={String(v.category.id)}
-                  className="border-white/10"
+                  className="border-border"
                 >
                   <TableCell className="font-mono text-xs">
                     {String(v.category.id)}
@@ -683,7 +789,7 @@ export default function AdminCatalogPanel() {
             <Input
               value={catName}
               onChange={(e) => setCatName(e.target.value)}
-              className="bg-white/5 border-white/10 mt-1"
+              className="bg-muted/70 border-border mt-1"
               placeholder="Himalayan Circuits"
             />
           </div>
@@ -692,7 +798,7 @@ export default function AdminCatalogPanel() {
             <Input
               value={catSort}
               onChange={(e) => setCatSort(e.target.value)}
-              className="bg-white/5 border-white/10 mt-1"
+              className="bg-muted/70 border-border mt-1"
             />
           </div>
           <div className="flex items-center gap-2 pb-2">
@@ -728,8 +834,8 @@ export default function AdminCatalogPanel() {
       </section>
 
       <section
-        className="rounded-2xl border border-white/10 p-6"
-        style={{ background: "oklch(0.16 0.025 232 / 0.6)" }}
+        className="rounded-2xl border border-border p-6"
+        style={{ background: "oklch(0.98 0.008 248 / 0.72)" }}
       >
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <h2 className="font-display text-xl font-bold">Packages</h2>
@@ -744,8 +850,8 @@ export default function AdminCatalogPanel() {
                 : undefined
             }
             style={{
-              background: "oklch(0.85 0.13 192)",
-              color: "oklch(0.13 0.04 195)",
+              background: "oklch(var(--brand-blue))",
+              color: "oklch(0.985 0.005 85)",
             }}
           >
             <Plus className="mr-1 h-4 w-4" />
@@ -754,7 +860,7 @@ export default function AdminCatalogPanel() {
         </div>
         <Table>
           <TableHeader>
-            <TableRow className="border-white/10">
+            <TableRow className="border-border">
               <TableHead className="w-16">Image</TableHead>
               <TableHead>ID</TableHead>
               <TableHead>Name</TableHead>
@@ -769,12 +875,12 @@ export default function AdminCatalogPanel() {
               const thumb =
                 String(pl.thumbnailUrl ?? "").trim() || pkg.heroImageUrl;
               return (
-              <TableRow key={String(pkg.id)} className="border-white/10">
+              <TableRow key={String(pkg.id)} className="border-border">
                 <TableCell className="p-2">
                   <img
                     src={thumb}
                     alt=""
-                    className="h-11 w-16 rounded-md object-cover border border-white/15 bg-black/20"
+                    className="h-11 w-16 rounded-md object-cover border border-border bg-black/20"
                   />
                 </TableCell>
                 <TableCell className="font-mono text-xs">
@@ -824,8 +930,8 @@ export default function AdminCatalogPanel() {
         <DialogContent
           className="max-h-[90vh] overflow-y-auto sm:max-w-lg"
           style={{
-            background: "oklch(0.14 0.025 232)",
-            border: "1px solid oklch(0.3 0.04 232 / 0.5)",
+            background: "oklch(0.99 0.006 248)",
+            border: "1px solid oklch(0.88 0.02 248 / 0.6)",
           }}
         >
           <DialogHeader>
@@ -837,7 +943,7 @@ export default function AdminCatalogPanel() {
             <div>
               <Label className="text-xs">Category</Label>
               <Select value={pkgCatId} onValueChange={setPkgCatId}>
-                <SelectTrigger className="mt-1 bg-white/5 border-white/10">
+                <SelectTrigger className="mt-1 bg-muted/70 border-border">
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -857,7 +963,7 @@ export default function AdminCatalogPanel() {
               <Input
                 value={pkgName}
                 onChange={(e) => setPkgName(e.target.value)}
-                className="mt-1 bg-white/5 border-white/10"
+                className="mt-1 bg-muted/70 border-border"
               />
             </div>
             <div>
@@ -865,34 +971,95 @@ export default function AdminCatalogPanel() {
               <Input
                 value={pkgDesc}
                 onChange={(e) => setPkgDesc(e.target.value)}
-                className="mt-1 bg-white/5 border-white/10"
+                className="mt-1 bg-muted/70 border-border"
               />
             </div>
             <div>
               <Label className="text-xs">Hero image URL</Label>
-              <Input
-                value={pkgImg}
-                onChange={(e) => setPkgImg(e.target.value)}
-                className="mt-1 bg-white/5 border-white/10"
-              />
+              <div className="mt-1 flex gap-2">
+                <Input
+                  value={pkgImg}
+                  onChange={(e) => setPkgImg(e.target.value)}
+                  className="flex-1 min-w-0 bg-muted/70 border-border"
+                />
+                {viteEnvIsTrue(import.meta.env.VITE_USE_NODE_BACKEND) ? (
+                  <>
+                    <input
+                      ref={heroFileRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        void handleCatalogImageUpload(
+                          f,
+                          setPkgImg,
+                          setUploadingHeroImg,
+                        );
+                        e.target.value = "";
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0 border-border bg-muted/70"
+                      disabled={uploadingHeroImg}
+                      onClick={() => heroFileRef.current?.click()}
+                    >
+                      {uploadingHeroImg ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Upload"
+                      )}
+                    </Button>
+                  </>
+                ) : null}
+              </div>
             </div>
             <div>
               <Label className="text-xs">Thumbnail URL (optional)</Label>
-              <Input
-                value={pkgThumbnail}
-                onChange={(e) => setPkgThumbnail(e.target.value)}
-                className="mt-1 bg-white/5 border-white/10"
-                placeholder="Smaller image for cards; defaults to hero"
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Long description (optional)</Label>
-              <Textarea
-                value={pkgLongDesc}
-                onChange={(e) => setPkgLongDesc(e.target.value)}
-                className="mt-1 bg-white/5 border-white/10 min-h-[88px]"
-                placeholder="Full details, amenities (comma or newline separated for villa chips)"
-              />
+              <div className="mt-1 flex gap-2">
+                <Input
+                  value={pkgThumbnail}
+                  onChange={(e) => setPkgThumbnail(e.target.value)}
+                  className="flex-1 min-w-0 bg-muted/70 border-border"
+                  placeholder="Smaller image for cards; defaults to hero"
+                />
+                {viteEnvIsTrue(import.meta.env.VITE_USE_NODE_BACKEND) ? (
+                  <>
+                    <input
+                      ref={thumbFileRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        void handleCatalogImageUpload(
+                          f,
+                          setPkgThumbnail,
+                          setUploadingThumbImg,
+                        );
+                        e.target.value = "";
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0 border-border bg-muted/70"
+                      disabled={uploadingThumbImg}
+                      onClick={() => thumbFileRef.current?.click()}
+                    >
+                      {uploadingThumbImg ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Upload"
+                      )}
+                    </Button>
+                  </>
+                ) : null}
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <Checkbox
@@ -908,7 +1075,7 @@ export default function AdminCatalogPanel() {
                 value={listingKind}
                 onValueChange={(v) => setListingKind(v as ListingKind)}
               >
-                <SelectTrigger className="mt-1 bg-white/5 border-white/10">
+                <SelectTrigger className="mt-1 bg-muted/70 border-border">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -925,6 +1092,36 @@ export default function AdminCatalogPanel() {
               </p>
             </div>
 
+            {listingKind === "hotel" || listingKind === "villa" ? (
+              <div>
+                <Label className="text-xs">Full description (required)</Label>
+                <Textarea
+                  value={pkgLongDesc}
+                  onChange={(e) => setPkgLongDesc(e.target.value)}
+                  className="mt-1 bg-muted/70 border-border min-h-[120px]"
+                  placeholder="Describe the property, rooms, meals, and what guests can expect. Hotels: optional first line rating:4.8"
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Shown on the Hotels &amp; Villas page and on the package detail
+                  screen. Not used for private, fixed, or trek listings.
+                </p>
+              </div>
+            ) : listingKind === "trek" ? (
+              <div>
+                <Label className="text-xs">Trek card accent (optional)</Label>
+                <Input
+                  value={trekListingMeta}
+                  onChange={(e) => setTrekListingMeta(e.target.value)}
+                  className="mt-1 bg-muted/70 border-border font-mono text-xs"
+                  placeholder="difficultyColor:oklch(var(--brand-coral))"
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Controls the difficulty badge colour on trek cards — not a
+                  guest-facing story.
+                </p>
+              </div>
+            ) : null}
+
             {listingKind === "fixed" || listingKind === "trek" ? (
               <>
                 <div>
@@ -932,7 +1129,7 @@ export default function AdminCatalogPanel() {
                   <Input
                     value={fixedPrice}
                     onChange={(e) => setFixedPrice(e.target.value)}
-                    className="mt-1 bg-white/5 border-white/10"
+                    className="mt-1 bg-muted/70 border-border"
                   />
                 </div>
                 <div className="space-y-2">
@@ -940,7 +1137,7 @@ export default function AdminCatalogPanel() {
                   {batches.map((b, i) => (
                     <div
                       key={b.rowKey}
-                      className="grid gap-2 border border-white/10 rounded-lg p-2"
+                      className="grid gap-2 border border-border rounded-lg p-2"
                     >
                       {b.batchId ? (
                         <p className="text-xs text-muted-foreground">
@@ -955,7 +1152,7 @@ export default function AdminCatalogPanel() {
                           n[i] = { ...n[i]!, date: e.target.value };
                           setBatches(n);
                         }}
-                        className="bg-white/5 border-white/10"
+                        className="bg-muted/70 border-border"
                       />
                       <div className="grid grid-cols-2 gap-2">
                         <Input
@@ -966,7 +1163,7 @@ export default function AdminCatalogPanel() {
                             n[i] = { ...n[i]!, total: e.target.value };
                             setBatches(n);
                           }}
-                          className="bg-white/5 border-white/10"
+                          className="bg-muted/70 border-border"
                         />
                         <Input
                           placeholder="Remaining"
@@ -976,7 +1173,7 @@ export default function AdminCatalogPanel() {
                             n[i] = { ...n[i]!, remaining: e.target.value };
                             setBatches(n);
                           }}
-                          className="bg-white/5 border-white/10"
+                          className="bg-muted/70 border-border"
                         />
                       </div>
                       <Button
@@ -1010,6 +1207,22 @@ export default function AdminCatalogPanel() {
                     Add batch
                   </Button>
                 </div>
+                <div>
+                  <Label className="text-xs">Inclusions (one per line)</Label>
+                  <Textarea
+                    value={fixedInclusions}
+                    onChange={(e) => setFixedInclusions(e.target.value)}
+                    placeholder={
+                      "Hotel stay (twin sharing)\nDaily breakfast\nAC transport"
+                    }
+                    rows={5}
+                    className="mt-1 bg-muted/70 border-border text-sm"
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Shown to guests: what is included (stay, meals, travel,
+                    etc.).
+                  </p>
+                </div>
               </>
             ) : (
               <>
@@ -1019,7 +1232,7 @@ export default function AdminCatalogPanel() {
                     <Input
                       value={minG}
                       onChange={(e) => setMinG(e.target.value)}
-                      className="mt-1 bg-white/5 border-white/10"
+                      className="mt-1 bg-muted/70 border-border"
                     />
                   </div>
                   <div>
@@ -1027,7 +1240,7 @@ export default function AdminCatalogPanel() {
                     <Input
                       value={maxG}
                       onChange={(e) => setMaxG(e.target.value)}
-                      className="mt-1 bg-white/5 border-white/10"
+                      className="mt-1 bg-muted/70 border-border"
                     />
                   </div>
                 </div>
@@ -1037,7 +1250,7 @@ export default function AdminCatalogPanel() {
                     value={priceKind}
                     onValueChange={(v) => setPriceKind(v as PricingKind)}
                   >
-                    <SelectTrigger className="mt-1 bg-white/5 border-white/10">
+                    <SelectTrigger className="mt-1 bg-muted/70 border-border">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1054,7 +1267,7 @@ export default function AdminCatalogPanel() {
                     <Input
                       value={singlePrice}
                       onChange={(e) => setSinglePrice(e.target.value)}
-                      className="mt-1 bg-white/5 border-white/10"
+                      className="mt-1 bg-muted/70 border-border"
                     />
                   </div>
                 ) : (
@@ -1069,7 +1282,7 @@ export default function AdminCatalogPanel() {
                             n[i] = { ...n[i]!, label: e.target.value };
                             setTiers(n);
                           }}
-                          className="bg-white/5 border-white/10"
+                          className="bg-muted/70 border-border"
                           placeholder="Label"
                         />
                         <Input
@@ -1079,7 +1292,7 @@ export default function AdminCatalogPanel() {
                             n[i] = { ...n[i]!, price: e.target.value };
                             setTiers(n);
                           }}
-                          className="bg-white/5 border-white/10 w-28"
+                          className="bg-muted/70 border-border w-28"
                           placeholder="INR"
                         />
                         <Button
@@ -1123,7 +1336,7 @@ export default function AdminCatalogPanel() {
                       n[i] = { ...n[i]!, id: e.target.value };
                       setAddOns(n);
                     }}
-                    className="bg-white/5 border-white/10 w-16"
+                    className="bg-muted/70 border-border w-16"
                     placeholder="id"
                   />
                   <Input
@@ -1133,7 +1346,7 @@ export default function AdminCatalogPanel() {
                       n[i] = { ...n[i]!, label: e.target.value };
                       setAddOns(n);
                     }}
-                    className="bg-white/5 border-white/10 flex-1"
+                    className="bg-muted/70 border-border flex-1"
                     placeholder="Label"
                   />
                   <Input
@@ -1143,7 +1356,7 @@ export default function AdminCatalogPanel() {
                       n[i] = { ...n[i]!, price: e.target.value };
                       setAddOns(n);
                     }}
-                    className="bg-white/5 border-white/10 w-24"
+                    className="bg-muted/70 border-border w-24"
                     placeholder="INR"
                   />
                   <Button
@@ -1176,14 +1389,76 @@ export default function AdminCatalogPanel() {
               </Button>
             </div>
 
+            {listingKind === "private" ? (
+              <div className="space-y-2">
+                <Label className="text-xs">
+                  Day-by-day itinerary (optional)
+                </Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Each block is shown as Day 1, Day 2, … on the private packages
+                  page. Not used for hotels or villas.
+                </p>
+                {itineraryDays.map((row, i) => (
+                  <div key={row.rowKey} className="flex flex-col gap-1">
+                    <span className="text-[11px] text-muted-foreground">
+                      Day {i + 1}
+                    </span>
+                    <Textarea
+                      value={row.text}
+                      onChange={(e) => {
+                        const n = [...itineraryDays];
+                        n[i] = { ...n[i]!, text: e.target.value };
+                        setItineraryDays(n);
+                      }}
+                      rows={2}
+                      className="bg-muted/70 border-border text-sm"
+                      placeholder="What happens today — drives, sights, meals, overnight stop…"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="self-start h-7 text-xs"
+                      onClick={() => {
+                        if (itineraryDays.length <= 1) {
+                          setItineraryDays([
+                            { rowKey: newRowKey(), text: "" },
+                          ]);
+                        } else {
+                          setItineraryDays(
+                            itineraryDays.filter((_, j) => j !== i),
+                          );
+                        }
+                      }}
+                    >
+                      Remove day
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setItineraryDays([
+                      ...itineraryDays,
+                      { rowKey: newRowKey(), text: "" },
+                    ])
+                  }
+                >
+                  Add day
+                </Button>
+              </div>
+            ) : null}
+
             <Button
               type="button"
               className="w-full font-bold"
               disabled={savingPkg}
               onClick={() => void savePackage()}
               style={{
-                background: "oklch(0.85 0.13 192)",
-                color: "oklch(0.13 0.04 195)",
+                background: "oklch(var(--brand-blue))",
+                color: "oklch(0.985 0.005 85)",
               }}
             >
               {savingPkg ? (

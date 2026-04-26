@@ -4,6 +4,12 @@ import SnowTerrain3D from "@/components/SnowTerrain3D";
 import ThreeErrorBoundary from "@/components/ThreeErrorBoundary";
 import { Button } from "@/components/ui/button";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -18,8 +24,15 @@ import {
   logoImgDevHandlers,
 } from "@/utils/devDebug";
 import {
+  CalendarDays,
+  CheckCircle2,
+  Bike,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
   Compass,
   Facebook,
+  House,
   Instagram,
   LogIn,
   LogOut,
@@ -28,21 +41,25 @@ import {
   Menu,
   Mountain,
   Phone,
+  Play,
+  Search,
   Shield,
+  SlidersHorizontal,
   Star,
+  User,
   Users,
   Youtube,
 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import type { ComponentType } from "react";
-import { useEffect, useRef, useState } from "react";
-import type { Page } from "../types";
+import { useEffect, useState } from "react";
+import type { PackageSearchFilters, Page } from "../types";
 import { getUserBearerToken } from "../utils/userLocalSession";
 import { viteEnvIsTrue } from "../utils/viteEnv";
 
 interface HomePageProps {
   setPage: (page: Page) => void;
-  openPackagesCatalog: () => void;
+  openPackagesCatalog: (filters?: PackageSearchFilters) => void;
 }
 
 const TREK_CARDS = [
@@ -84,115 +101,109 @@ const TREK_CARDS = [
   },
 ];
 
-const JOURNEY_WAYPOINTS = [
-  {
-    day: "Day 1",
-    label: "Manali Basecamp",
-    elevation: "Start",
-    x: 80,
-    y: 200,
-    isSummit: false,
-  },
-  {
-    day: "Day 3",
-    label: "Lower Camp",
-    elevation: "2,800m",
-    x: 220,
-    y: 150,
-    isSummit: false,
-  },
-  {
-    day: "Day 5",
-    label: "High Camp",
-    elevation: "4,200m",
-    x: 360,
-    y: 100,
-    isSummit: false,
-  },
-  {
-    day: "Day 7",
-    label: "Summit Push",
-    elevation: "5,000m",
-    x: 500,
-    y: 60,
-    isSummit: false,
-  },
-  {
-    day: "Day 8",
-    label: "Friendship Peak ★",
-    elevation: "5,289m",
-    x: 620,
-    y: 30,
-    isSummit: true,
-  },
-];
-
-const EXPERIENCES = [
-  {
-    label: "Wake Up Above the Clouds",
-    image: "/assets/generated/experience-above-clouds.dim_800x500.jpg",
-    text: "Every morning at base camp is a revelation. You open your tent to a world wrapped in silence, mist below your feet, and the summit calling from above.",
-  },
-  {
-    label: "Train on Snow and Ice",
-    image: "/assets/generated/experience-snow-training.dim_800x500.jpg",
-    text: "Our guides prepare you for every slope. Learn ice axe arrest, crampon technique, and high-altitude endurance in the most dramatic classroom on Earth.",
-  },
-  {
-    label: "Summit at Sunrise",
-    image: "/assets/generated/experience-summit-sunrise.dim_800x500.jpg",
-    text: "The summit is yours. As the sun breaks over the horizon, you stand at 5,289m — above the clouds, above doubt. This is why you came.",
-  },
-];
-
 const WHY_FEATURES = [
   {
     icon: Compass,
-    title: "Certified Mountain Guides",
-    desc: "UIAA-certified, 10+ years Himalayan experience",
+    title: "Chain of Hotels & Resorts",
+    desc: "By the name of Green stays Mountain Explorers we have our chain of camping sites, hotels & farmhouses across major tourist locations in India.",
   },
   {
     icon: Shield,
-    title: "Safety First",
-    desc: "Satellite communication, medical kits, evacuation protocol",
+    title: "Expert Guide",
+    desc: "All guides are certified from IMF with minimum 1000Hrs of climbing experience.",
   },
   {
     icon: Mountain,
-    title: "Premium Gear",
-    desc: "High-altitude tents, sleeping bags, technical equipment provided",
-  },
-  {
-    icon: Users,
-    title: "Small Groups",
-    desc: "Max 8 trekkers per batch — personal, intimate, safe",
+    title: "Best Price",
+    desc: "We assure best & cheap rates in this competitive market. Our aim is to make travel affordable to the common public.",
   },
 ];
 
 const TESTIMONIALS = [
   {
-    name: "Priya Sharma",
-    location: "Mumbai",
-    initials: "PS",
-    color: "oklch(0.6 0.18 320)",
+    name: "Afreen",
+    role: "Software developer",
+    image: "/assets/Testimonial/afreen.jpeg",
     quote:
-      "Friendship Peak was a life-changing experience. The guides were exceptional and safety was top priority.",
+      "Worth traveling with family, and enjoying weekend activities.",
   },
   {
-    name: "Arjun Mehta",
-    location: "Delhi",
-    initials: "AM",
-    color: "oklch(0.6 0.15 260)",
+    name: "Amit Kumar",
+    role: "Phd Scholar",
+    image: "/assets/Testimonial/amit%20kumar.jpeg",
     quote:
-      "Hampta Pass in 5 days felt like 5 lifetimes of memories. Mountain Explorers made it effortless.",
+      "Arrangement and location selection are superb.",
   },
   {
-    name: "Kavya Reddy",
-    location: "Bangalore",
-    initials: "KR",
-    color: "oklch(0.6 0.18 145)",
+    name: "Sagar tamore",
+    role: "Program director",
+    image: "/assets/Testimonial/sagar.jpeg",
     quote:
-      "The pre-trek preparation sessions and the summit push — I've never felt more alive.",
+      "Absolutely great - everything went according to plan.",
   },
+  {
+    name: "Chinmay pandit",
+    role: "Musician",
+    image: "/assets/Testimonial/chimay%20pandit.jpeg",
+    quote: "A memorable experience at a much affordable cost.",
+  },
+];
+
+const DESTINATION_LISTS = [
+  {
+    name: "Leh",
+    tag: "Adventure",
+    image: "/assets/Destination%20List/Leh-Ladakh.jpg",
+  },
+  {
+    name: "Uttarakhand",
+    tag: "Wildlife",
+    image: "/assets/Destination%20List/Uttarkhand.jpg",
+  },
+  {
+    name: "Himachal Pradesh",
+    tag: "Adventure",
+    image: "/assets/Destination%20List/himachal.jpg",
+  },
+  {
+    name: "Gujarat",
+    tag: "Culture",
+    image: "/assets/Destination%20List/gujrat.webp",
+  },
+  {
+    name: "Kerala",
+    tag: "God's own country",
+    image: "/assets/Destination%20List/kerls.webp",
+  },
+  {
+    name: "Maharashtra",
+    tag: "Weekend escapes",
+    image: "/assets/Destination%20List/maharasta.jpg",
+  },
+];
+
+const PLAN_BENEFITS = [
+  "Explore the unexplored",
+  "Affordable pricing",
+  "Handpicked destinations",
+  "Your trusted partner",
+];
+
+const LEADING_TRAVEL_FEATURES: Array<{
+  title: string;
+  icon: ComponentType<{ className?: string }>;
+}> = [
+  { title: "Cycling Tours", icon: Bike },
+  { title: "Expedition Tours", icon: Mountain },
+  { title: "Family Packages", icon: Users },
+  { title: "Farmhouse & Hotels", icon: House },
+];
+
+const PARTNER_LOGOS = [
+  "/assets/Partner/og-goibibo.aba291ed.png",
+  "/assets/Partner/MakeMyTrip_Logo.png",
+  "/assets/Partner/company%20limited%20Liabilty.jpg",
+  "/assets/Partner/hissar%20agriculture.jpg",
 ];
 
 const FOOTER_LINKS = {
@@ -206,33 +217,54 @@ const FOOTER_LINKS = {
   ],
 };
 
+/** Reference palette: utility bar + main nav (mountainexplorers-style) */
+const NAV_TEAL = "#003d52";
+const NAV_CTA_ORANGE = "#f05a42";
+const UTILITY_PHONE_DISPLAY = "+91 9152714521";
+const UTILITY_PHONE_TEL = "+919152714521";
+const UTILITY_EMAIL = "mnt@mountainexplorer.ind.in";
+const LOCAL_GUIDE_MAILTO = `mailto:${UTILITY_EMAIL}?subject=${encodeURIComponent("Become a local guide")}`;
+
 const SOCIAL_LINKS: {
   icon: ComponentType<{ className?: string }>;
   href: string;
   label: string;
 }[] = [
-  { icon: Instagram, href: "https://instagram.com", label: "Instagram" },
-  { icon: Facebook, href: "https://facebook.com", label: "Facebook" },
-  { icon: Youtube, href: "https://youtube.com", label: "YouTube" },
+  {
+    icon: Facebook,
+    href: "https://www.facebook.com/people/Mountain-Explorers-India-%EF%B8%8F/100075502284640/",
+    label: "Facebook",
+  },
+  {
+    icon: Instagram,
+    href: "https://www.instagram.com/mountainexplorers.ind/",
+    label: "Instagram",
+  },
+  {
+    icon: Youtube,
+    href: "https://www.youtube.com/channel/UCnqGnj898l5ZQ217VC_JY0A",
+    label: "YouTube",
+  },
 ];
 
 const HOME_HEADER_SECTION_LINKS: [string, string][] = [
   ["Home", ""],
   ["Treks", "treks"],
-  ["Journey", "journey"],
-  ["Experience", "experience"],
   ["About", "about"],
+  ["Contact", "contact"],
 ];
 
 export default function HomePage({
   setPage,
   openPackagesCatalog,
 }: HomePageProps) {
-  const [scrollY, setScrollY] = useState(0);
-  const [showFloatingCTA, setShowFloatingCTA] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const journeyRef = useRef<HTMLDivElement>(null);
-  const [journeyVisible, setJourneyVisible] = useState(false);
+  const [travelDate, setTravelDate] = useState("");
+  const [guests, setGuests] = useState(1);
+  const [showPriceRange, setShowPriceRange] = useState(false);
+  const [minPrice, setMinPrice] = useState(0);
+  const [maxPrice, setMaxPrice] = useState(45675);
+  const [testimonialStart, setTestimonialStart] = useState(0);
   const { login, clear, identity } = useInternetIdentity();
   const { actor } = useActor();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -252,26 +284,6 @@ export default function HomePage({
   }, [actor, identity]);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setScrollY(window.scrollY);
-      setShowFloatingCTA(window.scrollY > 200);
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) setJourneyVisible(true);
-      },
-      { threshold: 0.3 },
-    );
-    if (journeyRef.current) observer.observe(journeyRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
     logLogoDevContext(LOGO_URL);
     logDevBundledImages({ logoMountain: LOGO_URL, heroMountains });
   }, []);
@@ -281,329 +293,749 @@ export default function HomePage({
   };
 
   const closeMobileNav = () => setMobileNavOpen(false);
+  const PRICE_MIN = 0;
+  const PRICE_MAX = 45675;
+  const rangeTrackLeft = ((minPrice - PRICE_MIN) / (PRICE_MAX - PRICE_MIN)) * 100;
+  const rangeTrackRight =
+    100 - ((maxPrice - PRICE_MIN) / (PRICE_MAX - PRICE_MIN)) * 100;
+  const visibleTestimonials = Array.from({ length: 3 }, (_, offset) => {
+    return TESTIMONIALS[(testimonialStart + offset) % TESTIMONIALS.length];
+  });
+  const showPrevTestimonial = () =>
+    setTestimonialStart(
+      (prev) => (prev - 1 + TESTIMONIALS.length) % TESTIMONIALS.length,
+    );
+  const showNextTestimonial = () =>
+    setTestimonialStart((prev) => (prev + 1) % TESTIMONIALS.length);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setTestimonialStart((prev) => (prev + 1) % TESTIMONIALS.length);
+    }, 4000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   return (
     <div className="min-h-screen overflow-x-hidden">
-      {/* NAVBAR */}
-      <header
-        className="fixed top-0 left-0 right-0 z-50"
-        style={{
-          background:
-            scrollY > 50
-              ? "oklch(0.11 0.025 232 / 0.95)"
-              : "oklch(0.09 0.018 232 / 0.3)",
-          backdropFilter: "blur(20px)",
-          borderBottom:
-            scrollY > 50
-              ? "1px solid oklch(0.31 0.03 230 / 0.3)"
-              : "1px solid transparent",
-          transition: "all 0.3s ease",
-        }}
-      >
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <button
-            type="button"
-            className="flex items-center gap-2.5"
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          >
-            <img
-              src={LOGO_URL}
-              alt="Mountain Explorers"
-              className="w-10 h-10 rounded-full object-cover"
-              {...(logoImgDevHandlers() ?? {})}
-            />
-            <span className="font-display font-bold text-lg tracking-tight text-foreground">
-              MOUNTAIN <span className="text-cyan">EXPLORERS</span>
-            </span>
-          </button>
-
-          <nav className="hidden lg:flex items-center gap-6">
-            {HOME_HEADER_SECTION_LINKS.map(([label, id]) => (
-              <button
-                key={label}
-                type="button"
-                data-ocid="nav.link"
-                onClick={() =>
-                  id
-                    ? scrollToSection(id)
-                    : window.scrollTo({ top: 0, behavior: "smooth" })
-                }
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+      {/* NAVBAR — utility bar + white main row (mountainexplorers-style) */}
+      <header className="fixed top-0 left-0 right-0 z-50 shadow-sm">
+        <div
+          className="text-white/95 border-b border-white/10"
+          style={{ backgroundColor: NAV_TEAL }}
+        >
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 h-10 sm:h-11 flex items-center justify-between gap-1.5 sm:gap-2 text-[11px] sm:text-sm">
+            <div className="flex items-center gap-2 sm:gap-6 min-w-0">
+              <a
+                href={`tel:${UTILITY_PHONE_TEL}`}
+                className="flex items-center gap-1.5 shrink-0 hover:opacity-90 transition-opacity"
+                style={{ color: "#7dd3fc" }}
               >
-                {label}
-              </button>
-            ))}
+                <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span className="hidden sm:inline font-medium">
+                  {UTILITY_PHONE_DISPLAY}
+                </span>
+              </a>
+              <a
+                href={`mailto:${UTILITY_EMAIL}`}
+                className="hidden sm:flex items-center gap-1.5 min-w-0 hover:opacity-90 truncate"
+                style={{ color: "#7dd3fc" }}
+              >
+                <Mail className="w-4 h-4 shrink-0" />
+                <span className="truncate">{UTILITY_EMAIL}</span>
+              </a>
+            </div>
+            <div className="flex items-center gap-1 sm:gap-4 shrink-0">
+              <div className="flex items-center gap-0">
+                {SOCIAL_LINKS.map((social) => {
+                  const Icon = social.icon;
+                  return (
+                    <a
+                      key={social.label}
+                      href={social.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={social.label}
+                      data-ocid={`nav.utility.social.${social.label.toLowerCase()}`}
+                      className="p-1 sm:p-1.5 rounded-full hover:bg-white/10 transition-colors"
+                    >
+                      <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
+                    </a>
+                  );
+                })}
+              </div>
+              <a
+                href={LOCAL_GUIDE_MAILTO}
+                data-ocid="nav.utility.local_guide"
+                className="font-bold uppercase tracking-wide text-white px-2 py-1.5 sm:px-3 text-[9px] sm:text-xs whitespace-nowrap rounded-sm hover:brightness-110 transition-all"
+                style={{ backgroundColor: NAV_CTA_ORANGE }}
+              >
+                <span className="sm:hidden">LOCAL GUIDE</span>
+                <span className="hidden sm:inline">BECOME A LOCAL GUIDE</span>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white border-b border-border">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 min-h-[5.25rem] h-[5.25rem] sm:min-h-24 sm:h-24 flex items-center gap-3 lg:grid lg:grid-cols-[auto_1fr_auto] lg:gap-6">
             <button
               type="button"
-              data-ocid="nav.packages.link"
-              onClick={() => openPackagesCatalog()}
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center shrink-0 text-left py-1 -my-1"
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              data-ocid="nav.logo"
             >
-              Packages
+              <img
+                src={LOGO_URL}
+                alt="Mountain Explorers"
+                className="h-11 w-auto sm:h-14 md:h-[4.25rem] max-h-[4.75rem] object-contain object-left rounded-md"
+                {...(logoImgDevHandlers() ?? {})}
+              />
             </button>
-            {nodeBackend && (
-              <button
-                type="button"
-                data-ocid="nav.account.link"
-                onClick={() => setPage("account")}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Account
-              </button>
-            )}
-            {showMyBookingsNav && (
-              <button
-                type="button"
-                data-ocid="nav.mybookings.link"
-                onClick={() => setPage("my-bookings")}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                My Bookings
-              </button>
-            )}
-            {isAdmin && (
-              <button
-                type="button"
-                data-ocid="nav.admin.link"
-                onClick={() => setPage("admin")}
-                className="text-sm font-medium hover:text-foreground transition-colors"
-                style={{ color: "oklch(0.75 0.14 55)" }}
-              >
-                Admin
-              </button>
-            )}
-          </nav>
 
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <div className="hidden sm:flex items-center gap-3">
-              {identity ? (
+            <nav
+              className="hidden lg:flex flex-wrap items-center justify-center gap-x-5 gap-y-1 xl:gap-x-6 min-w-0"
+              aria-label="Primary"
+            >
+              <button
+                type="button"
+                className="text-sm font-semibold hover:opacity-75 transition-opacity"
+                style={{ color: NAV_TEAL }}
+                data-ocid="nav.link.home"
+                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              >
+                Home
+              </button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className="flex items-center gap-0.5 text-sm font-semibold hover:opacity-75 outline-none cursor-pointer"
+                  style={{ color: NAV_TEAL }}
+                  data-ocid="nav.tours.trigger"
+                >
+                  Tours
+                  <ChevronDown className="w-4 h-4 opacity-70" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" className="min-w-[12rem]">
+                  <DropdownMenuItem
+                    onClick={() => scrollToSection("treks")}
+                    data-ocid="nav.tours.treks"
+                  >
+                    Featured treks
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => openPackagesCatalog()}
+                    data-ocid="nav.tours.packages"
+                  >
+                    Browse packages
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <button
+                type="button"
+                className="text-sm font-semibold hover:opacity-75"
+                style={{ color: NAV_TEAL }}
+                data-ocid="nav.destination"
+                onClick={() => scrollToSection("treks")}
+              >
+                Destination
+              </button>
+
+              <button
+                type="button"
+                className="text-sm font-semibold hover:opacity-75"
+                style={{ color: NAV_TEAL }}
+                data-ocid="nav.blog"
+                onClick={() => scrollToSection("testimonials")}
+              >
+                Blog
+              </button>
+
+              <button
+                type="button"
+                className="text-sm font-semibold hover:opacity-75"
+                style={{ color: NAV_TEAL }}
+                data-ocid="nav.about"
+                onClick={() => scrollToSection("about")}
+              >
+                About
+              </button>
+
+              <button
+                type="button"
+                className="text-sm font-semibold hover:opacity-75"
+                style={{ color: NAV_TEAL }}
+                data-ocid="nav.contact"
+                onClick={() => scrollToSection("contact")}
+              >
+                Contact
+              </button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className="flex items-center gap-0.5 text-sm font-semibold hover:opacity-75 outline-none cursor-pointer"
+                  style={{ color: NAV_TEAL }}
+                  data-ocid="nav.services.trigger"
+                >
+                  Our services
+                  <ChevronDown className="w-4 h-4 opacity-70" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" className="min-w-[14rem]">
+                  <DropdownMenuItem
+                    onClick={() => setPage("careers")}
+                    data-ocid="nav.services.careers"
+                  >
+                    Careers
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => openPackagesCatalog()}>
+                    Gallery
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setPage("partners")}
+                    data-ocid="nav.services.partner"
+                  >
+                    Our Partner
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setPage("team")}
+                    data-ocid="nav.services.team"
+                  >
+                    Our Team
+                  </DropdownMenuItem>
+                  {nodeBackend && (
+                    <DropdownMenuItem onClick={() => setPage("account")}>
+                      Account
+                    </DropdownMenuItem>
+                  )}
+                  {showMyBookingsNav && (
+                    <DropdownMenuItem onClick={() => setPage("my-bookings")}>
+                      My bookings
+                    </DropdownMenuItem>
+                  )}
+                  {isAdmin && (
+                    <DropdownMenuItem onClick={() => setPage("admin")}>
+                      Admin
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </nav>
+
+            <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 justify-end ml-auto lg:ml-0">
+              <button
+                type="button"
+                className="hidden sm:inline-flex h-12 w-12 items-center justify-center rounded-full bg-muted border border-border hover:bg-muted/80 transition-colors"
+                aria-label="Search packages"
+                data-ocid="nav.search"
+                onClick={() => openPackagesCatalog()}
+              >
+                <Search className="h-5 w-5" style={{ color: NAV_TEAL }} />
+              </button>
+              <button
+                type="button"
+                className="hidden sm:inline-flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 border border-amber-100 hover:bg-amber-100/90 transition-colors"
+                aria-label={identity ? "Account" : "Log in"}
+                data-ocid="nav.user"
+                onClick={() =>
+                  nodeBackend ? setPage("account") : void login()
+                }
+              >
+                <User className="h-5 w-5" style={{ color: NAV_TEAL }} />
+              </button>
+              {identity && (
                 <button
                   type="button"
+                  className="hidden md:inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
                   data-ocid="nav.logout.button"
                   onClick={() => clear()}
-                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <LogOut className="w-4 h-4" />
-                  Logout
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  data-ocid="nav.login.button"
-                  onClick={() =>
-                    nodeBackend ? setPage("account") : void login()
-                  }
-                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <LogIn className="w-4 h-4" />
-                  Login
+                  <span className="hidden xl:inline">Logout</span>
                 </button>
               )}
               <Button
                 data-ocid="nav.primary_button"
                 onClick={() => openPackagesCatalog()}
-                className="pill-btn"
+                className="pill-btn hidden sm:inline-flex text-sm px-6 py-2.5 h-12"
                 style={{
-                  background: "oklch(0.85 0.13 192)",
-                  color: "oklch(0.13 0.04 195)",
+                  background: "oklch(var(--brand-blue))",
+                  color: "oklch(0.985 0 0)",
                   fontWeight: 700,
                 }}
               >
-                Book Now
+                Book now
               </Button>
-            </div>
 
-            <button
-              type="button"
-              className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-md text-foreground hover:bg-foreground/10 transition-colors"
-              aria-label="Open menu"
-              data-ocid="nav.mobile_menu.open"
-              onClick={() => setMobileNavOpen(true)}
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-            <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-              <SheetContent
-                side="right"
-                className="flex h-full w-[min(100%,20rem)] flex-col gap-0 border-l border-[oklch(0.3_0.04_232/0.5)] bg-[oklch(0.11_0.025_232)] p-0 [&>button]:text-foreground"
+              <button
+                type="button"
+                className="lg:hidden inline-flex h-12 w-12 items-center justify-center rounded-md border border-border bg-muted/40 text-foreground hover:bg-muted/70"
+                aria-label="Open menu"
+                data-ocid="nav.mobile_menu.open"
+                onClick={() => setMobileNavOpen(true)}
               >
-                <SheetHeader className="border-b border-[oklch(0.3_0.04_232/0.35)] px-6 py-4 text-left">
-                  <SheetTitle className="font-display text-lg">Menu</SheetTitle>
-                  <SheetDescription className="sr-only">
-                    Site navigation and account actions
-                  </SheetDescription>
-                </SheetHeader>
-                <nav
-                  className="flex flex-col px-4 py-2"
-                  aria-label="Mobile navigation"
-                >
-                  {HOME_HEADER_SECTION_LINKS.map(([label, id]) => (
-                    <button
-                      key={label}
-                      type="button"
-                      data-ocid="nav.mobile.link"
-                      onClick={() => {
-                        closeMobileNav();
-                        if (id) scrollToSection(id);
-                        else window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
-                      className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-foreground/5 hover:text-foreground transition-colors"
-                    >
-                      {label}
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    data-ocid="nav.mobile.packages"
-                    onClick={() => {
-                      closeMobileNav();
-                      openPackagesCatalog();
-                    }}
-                    className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-foreground/5 hover:text-foreground transition-colors"
-                  >
-                    Packages
-                  </button>
-                  {nodeBackend && (
-                    <button
-                      type="button"
-                      data-ocid="nav.mobile.account"
-                      onClick={() => {
-                        closeMobileNav();
-                        setPage("account");
-                      }}
-                      className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-foreground/5 hover:text-foreground transition-colors"
-                    >
-                      Account
-                    </button>
-                  )}
-                  {showMyBookingsNav && (
-                    <button
-                      type="button"
-                      data-ocid="nav.mobile.mybookings"
-                      onClick={() => {
-                        closeMobileNav();
-                        setPage("my-bookings");
-                      }}
-                      className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-foreground/5 hover:text-foreground transition-colors"
-                    >
-                      My Bookings
-                    </button>
-                  )}
-                  {isAdmin && (
-                    <button
-                      type="button"
-                      data-ocid="nav.mobile.admin"
-                      onClick={() => {
-                        closeMobileNav();
-                        setPage("admin");
-                      }}
-                      className="w-full rounded-md px-3 py-3 text-left text-base font-medium transition-colors hover:bg-foreground/5"
-                      style={{ color: "oklch(0.75 0.14 55)" }}
-                    >
-                      Admin
-                    </button>
-                  )}
-                </nav>
-                <div className="mt-auto flex flex-col gap-3 border-t border-[oklch(0.3_0.04_232/0.35)] px-4 py-4 sm:hidden">
-                  {identity ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      data-ocid="nav.mobile.logout"
-                      onClick={() => {
-                        closeMobileNav();
-                        clear();
-                      }}
-                      className="w-full justify-center gap-2"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      Logout
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      data-ocid="nav.mobile.login"
-                      onClick={() => {
-                        closeMobileNav();
-                        if (nodeBackend) setPage("account");
-                        else void login();
-                      }}
-                      className="w-full justify-center gap-2"
-                    >
-                      <LogIn className="w-4 h-4" />
-                      Login
-                    </Button>
-                  )}
-                  <Button
-                    data-ocid="nav.mobile.primary_button"
-                    onClick={() => {
-                      closeMobileNav();
-                      openPackagesCatalog();
-                    }}
-                    className="pill-btn w-full"
-                    style={{
-                      background: "oklch(0.85 0.13 192)",
-                      color: "oklch(0.13 0.04 195)",
-                      fontWeight: 700,
-                    }}
-                  >
-                    Book Now
-                  </Button>
-                </div>
-              </SheetContent>
-            </Sheet>
+                <Menu className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         </div>
+
+        <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+          <SheetContent
+            side="right"
+            className="flex h-full w-[min(100%,20rem)] flex-col gap-0 border-l border-border bg-background p-0 [&>button]:text-foreground"
+          >
+            <SheetHeader className="border-b border-border px-4 py-4 text-left space-y-3">
+              <div
+                className="rounded-lg px-3 py-2.5 text-white/95 text-xs space-y-2"
+                style={{ backgroundColor: NAV_TEAL }}
+              >
+                <a
+                  href={`tel:${UTILITY_PHONE_TEL}`}
+                  className="flex items-center gap-2"
+                  style={{ color: "#7dd3fc" }}
+                >
+                  <Phone className="w-4 h-4 shrink-0" />
+                  {UTILITY_PHONE_DISPLAY}
+                </a>
+                <a
+                  href={`mailto:${UTILITY_EMAIL}`}
+                  className="flex items-start gap-2 break-all"
+                  style={{ color: "#7dd3fc" }}
+                >
+                  <Mail className="w-4 h-4 shrink-0 mt-0.5" />
+                  {UTILITY_EMAIL}
+                </a>
+                <div className="flex items-center gap-1 pt-1">
+                  {SOCIAL_LINKS.map((social) => {
+                    const Icon = social.icon;
+                    return (
+                      <a
+                        key={social.label}
+                        href={social.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={social.label}
+                        className="p-1.5 rounded-full bg-white/10 hover:bg-white/15"
+                      >
+                        <Icon className="w-4 h-4 text-white" />
+                      </a>
+                    );
+                  })}
+                </div>
+                <a
+                  href={LOCAL_GUIDE_MAILTO}
+                  className="block text-center font-bold uppercase tracking-wide text-[10px] py-2 rounded text-white"
+                  style={{ backgroundColor: NAV_CTA_ORANGE }}
+                >
+                  BECOME A LOCAL GUIDE
+                </a>
+              </div>
+              <SheetTitle className="font-display text-lg">Menu</SheetTitle>
+              <SheetDescription className="sr-only">
+                Site navigation and account actions
+              </SheetDescription>
+            </SheetHeader>
+            <nav
+              className="flex flex-col px-4 py-2 flex-1 overflow-y-auto"
+              aria-label="Mobile navigation"
+            >
+              <button
+                type="button"
+                data-ocid="nav.mobile.home"
+                onClick={() => {
+                  closeMobileNav();
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+              >
+                Home
+              </button>
+              <button
+                type="button"
+                data-ocid="nav.mobile.treks"
+                onClick={() => {
+                  closeMobileNav();
+                  scrollToSection("treks");
+                }}
+                className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+              >
+                Featured treks
+              </button>
+              <button
+                type="button"
+                data-ocid="nav.mobile.packages"
+                onClick={() => {
+                  closeMobileNav();
+                  openPackagesCatalog();
+                }}
+                className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+              >
+                Browse packages
+              </button>
+              {HOME_HEADER_SECTION_LINKS.filter(([l]) => l !== "Home").map(
+                ([label, id]) => (
+                  <button
+                    key={label}
+                    type="button"
+                    data-ocid="nav.mobile.link"
+                    onClick={() => {
+                      closeMobileNav();
+                      if (id) scrollToSection(id);
+                    }}
+                    className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+                  >
+                    {label}
+                  </button>
+                ),
+              )}
+              <button
+                type="button"
+                data-ocid="nav.mobile.services.careers"
+                onClick={() => {
+                  closeMobileNav();
+                  setPage("careers");
+                }}
+                className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+              >
+                Careers
+              </button>
+              <button
+                type="button"
+                data-ocid="nav.mobile.services.gallery"
+                onClick={() => {
+                  closeMobileNav();
+                  openPackagesCatalog();
+                }}
+                className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+              >
+                Gallery
+              </button>
+              <button
+                type="button"
+                data-ocid="nav.mobile.services.partner"
+                onClick={() => {
+                  closeMobileNav();
+                  setPage("partners");
+                }}
+                className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+              >
+                Our Partner
+              </button>
+              <button
+                type="button"
+                data-ocid="nav.mobile.services.team"
+                onClick={() => {
+                  closeMobileNav();
+                  setPage("team");
+                }}
+                className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+              >
+                Our Team
+              </button>
+              {nodeBackend && (
+                <button
+                  type="button"
+                  data-ocid="nav.mobile.account"
+                  onClick={() => {
+                    closeMobileNav();
+                    setPage("account");
+                  }}
+                  className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+                >
+                  Account
+                </button>
+              )}
+              {showMyBookingsNav && (
+                <button
+                  type="button"
+                  data-ocid="nav.mobile.mybookings"
+                  onClick={() => {
+                    closeMobileNav();
+                    setPage("my-bookings");
+                  }}
+                  className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+                >
+                  My Bookings
+                </button>
+              )}
+              {isAdmin && (
+                <button
+                  type="button"
+                  data-ocid="nav.mobile.admin"
+                  onClick={() => {
+                    closeMobileNav();
+                    setPage("admin");
+                  }}
+                  className="w-full rounded-md px-3 py-3 text-left text-base font-medium transition-colors hover:bg-muted/80"
+                  style={{ color: "oklch(var(--brand-coral))" }}
+                >
+                  Admin
+                </button>
+              )}
+            </nav>
+            <div className="mt-auto flex flex-col gap-3 border-t border-border px-4 py-4">
+              {identity ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  data-ocid="nav.mobile.logout"
+                  onClick={() => {
+                    closeMobileNav();
+                    clear();
+                  }}
+                  className="w-full justify-center gap-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  data-ocid="nav.mobile.login"
+                  onClick={() => {
+                    closeMobileNav();
+                    if (nodeBackend) setPage("account");
+                    else void login();
+                  }}
+                  className="w-full justify-center gap-2"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Login
+                </Button>
+              )}
+              <Button
+                data-ocid="nav.mobile.primary_button"
+                onClick={() => {
+                  closeMobileNav();
+                  openPackagesCatalog();
+                }}
+                className="pill-btn w-full"
+                style={{
+                  background: "oklch(var(--brand-blue))",
+                  color: "oklch(0.985 0 0)",
+                  fontWeight: 700,
+                }}
+              >
+                Book now
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
       </header>
 
       {/* HERO — 3D Snow Terrain */}
       <ThreeErrorBoundary>
         <SnowTerrain3D
-          openBooking={() => openPackagesCatalog()}
+          openBooking={(filters) => openPackagesCatalog(filters)}
           scrollToSection={scrollToSection}
         />
       </ThreeErrorBoundary>
 
-      {/* FEATURED TREKS */}
-      <section id="treks" className="py-24">
+      {/* SEARCH SECTION */}
+      <section className="relative z-30 -mt-2 md:-mt-14 pb-6">
+        <div className="max-w-7xl mx-auto px-6">
+          <div
+            className="rounded-xl bg-white p-3 sm:p-4 shadow-xl border border-white/70"
+            style={{ boxShadow: "0 20px 40px rgba(0,0,0,0.12)" }}
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto_auto] gap-3 items-center">
+              <label className="flex items-center gap-2.5 border border-transparent sm:border-r sm:pr-3">
+                <CalendarDays className="w-4 h-4 text-cyan shrink-0" />
+                <div className="min-w-0 w-full">
+                  <span className="block text-[11px] font-medium text-muted-foreground">
+                    When
+                  </span>
+                  <input
+                    type="date"
+                    value={travelDate}
+                    onChange={(e) => setTravelDate(e.target.value)}
+                    className="w-full border-0 p-0 bg-transparent text-sm font-semibold focus:outline-none"
+                  />
+                </div>
+              </label>
+
+              <label className="flex items-center gap-2.5">
+                <Users className="w-4 h-4 text-cyan shrink-0" />
+                <div className="min-w-0">
+                  <span className="block text-[11px] font-medium text-muted-foreground">
+                    Guests
+                  </span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={guests}
+                    onChange={(e) => setGuests(Number(e.target.value) || 1)}
+                    className="w-20 border-0 p-0 bg-transparent text-sm font-semibold focus:outline-none"
+                  />
+                </div>
+              </label>
+              <div className="hidden sm:flex items-center justify-center">
+                <button
+                  type="button"
+                  aria-label="Toggle price filter"
+                  onClick={() => setShowPriceRange((v) => !v)}
+                  className="inline-flex items-center justify-center rounded-md p-2 hover:bg-muted/70 transition-colors"
+                >
+                  <SlidersHorizontal className="w-4 h-4 text-cyan" />
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  openPackagesCatalog({
+                    destination: "",
+                    date: travelDate,
+                    guests: Math.max(1, guests),
+                    minPrice,
+                    maxPrice,
+                  })
+                }
+                className="h-12 px-6 rounded-lg font-bold tracking-[0.14em] text-xs uppercase inline-flex items-center justify-center gap-2"
+                style={{
+                  background: "oklch(var(--brand-blue))",
+                  color: "oklch(0.985 0 0)",
+                }}
+              >
+                <Search className="w-4 h-4" />
+                Search
+              </button>
+            </div>
+
+            {showPriceRange && (
+              <div className="mt-3 pt-3 border-t border-border/70">
+                <div className="relative h-8">
+                  <div className="absolute top-3 left-0 right-0 h-1.5 rounded-full bg-[oklch(0.9_0.02_248)]" />
+                  <div
+                    className="absolute top-3 h-1.5 rounded-full"
+                    style={{
+                      left: `${rangeTrackLeft}%`,
+                      right: `${rangeTrackRight}%`,
+                      background: "oklch(var(--brand-blue))",
+                    }}
+                  />
+                  <input
+                    type="range"
+                    min={PRICE_MIN}
+                    max={PRICE_MAX}
+                    value={minPrice}
+                    onChange={(e) => {
+                      const value = Math.min(Number(e.target.value), maxPrice - 500);
+                      setMinPrice(value);
+                    }}
+                    className="absolute inset-0 w-full appearance-none bg-transparent pointer-events-auto"
+                    aria-label="Minimum price"
+                  />
+                  <input
+                    type="range"
+                    min={PRICE_MIN}
+                    max={PRICE_MAX}
+                    value={maxPrice}
+                    onChange={(e) => {
+                      const value = Math.max(Number(e.target.value), minPrice + 500);
+                      setMaxPrice(value);
+                    }}
+                    className="absolute inset-0 w-full appearance-none bg-transparent pointer-events-auto"
+                    aria-label="Maximum price"
+                  />
+                </div>
+                <div className="flex items-center justify-between text-xs font-semibold text-cyan">
+                  <span>₹{minPrice.toLocaleString("en-IN")}</span>
+                  <span>₹{maxPrice.toLocaleString("en-IN")}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* DESTINATION LISTS */}
+      <section id="treks" className="pt-6 md:pt-10 pb-20">
         <div className="max-w-7xl mx-auto px-6">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-14"
+            transition={{ duration: 0.5 }}
+            className="text-center mb-12"
+          >
+            <p className="text-cyan text-xs font-bold tracking-[0.3em] uppercase mb-3">
+              Destination lists
+            </p>
+            <h2
+              className="font-display font-extrabold text-foreground"
+              style={{ fontSize: "clamp(30px, 4vw, 52px)" }}
+            >
+              Go Exotic Places
+            </h2>
+          </motion.div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {DESTINATION_LISTS.map((destination, i) => (
+              <motion.div
+                key={destination.name}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.45, delay: i * 0.06 }}
+                className="glass-card rounded-2xl overflow-hidden"
+              >
+                <img
+                  src={destination.image}
+                  alt={destination.name}
+                  className="h-44 w-full object-cover"
+                  loading="lazy"
+                />
+                <div className="p-5">
+                  <p className="text-xs uppercase tracking-wider text-cyan mb-2">
+                    {destination.tag}
+                  </p>
+                  <h3 className="font-display text-xl font-bold text-foreground">
+                    {destination.name}
+                  </h3>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FEATURED EXPEDITIONS */}
+      <section className="py-20">
+        <div className="max-w-7xl mx-auto px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="text-center mb-12"
           >
             <p className="text-cyan text-xs font-bold tracking-[0.3em] uppercase mb-3">
               FEATURED EXPEDITIONS
             </p>
             <h2
               className="font-display font-extrabold text-foreground"
-              style={{ fontSize: "clamp(32px, 4vw, 54px)" }}
+              style={{ fontSize: "clamp(30px, 4vw, 52px)" }}
             >
               Choose Your Peak
             </h2>
           </motion.div>
 
-          <div
-            data-ocid="treks.list"
-            className="grid grid-cols-1 md:grid-cols-3 gap-6"
-          >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {TREK_CARDS.map((trek, i) => (
               <motion.div
                 key={trek.id}
-                data-ocid={`treks.item.${i + 1}`}
-                initial={{ opacity: 0, y: 40 }}
+                initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.12 }}
-                onClick={() => openPackagesCatalog()}
+                transition={{ duration: 0.45, delay: i * 0.08 }}
                 className="trek-card-hover rounded-2xl overflow-hidden cursor-pointer relative group"
                 style={{
-                  background: "oklch(0.16 0.025 232)",
-                  border: "1px solid oklch(0.31 0.03 230 / 0.5)",
+                  background: "oklch(0.98 0.009 248)",
+                  border: "1px solid oklch(0.88 0.02 248 / 0.6)",
                 }}
+                onClick={() => openPackagesCatalog()}
               >
                 <div className="relative h-56 overflow-hidden">
                   <img
@@ -616,317 +1048,29 @@ export default function HomePage({
                     className="absolute inset-0"
                     style={{
                       background:
-                        "linear-gradient(to top, oklch(0.16 0.025 232) 0%, transparent 50%)",
+                        "linear-gradient(to top, oklch(0.2 0.06 248 / 0.5) 0%, transparent 50%)",
                     }}
                   />
-                  <div className="absolute top-3 left-3">
-                    <span
-                      className="text-xs font-bold px-3 py-1 rounded-full"
-                      style={{
-                        background: "oklch(0.85 0.13 192 / 0.2)",
-                        color: "oklch(0.85 0.13 192)",
-                        border: "1px solid oklch(0.85 0.13 192 / 0.4)",
-                      }}
-                    >
-                      {trek.altitude}
-                    </span>
-                  </div>
                 </div>
-
                 <div className="p-5 space-y-4">
-                  <div className="flex items-start justify-between">
-                    <h3 className="font-display font-bold text-xl text-foreground">
-                      {trek.name}
-                    </h3>
-                    <span
-                      className="text-xs font-bold px-2.5 py-1 rounded-full"
-                      style={{
-                        background:
-                          trek.difficultyColor === "orange"
-                            ? "oklch(0.75 0.14 55 / 0.15)"
-                            : trek.difficultyColor === "cyan"
-                              ? "oklch(0.85 0.13 192 / 0.15)"
-                              : "oklch(0.65 0.15 145 / 0.15)",
-                        color:
-                          trek.difficultyColor === "orange"
-                            ? "oklch(0.75 0.14 55)"
-                            : trek.difficultyColor === "cyan"
-                              ? "oklch(0.85 0.13 192)"
-                              : "oklch(0.65 0.15 145)",
-                        border:
-                          trek.difficultyColor === "orange"
-                            ? "1px solid oklch(0.75 0.14 55 / 0.3)"
-                            : trek.difficultyColor === "cyan"
-                              ? "1px solid oklch(0.85 0.13 192 / 0.3)"
-                              : "1px solid oklch(0.65 0.15 145 / 0.3)",
-                      }}
-                    >
-                      {trek.difficulty}
-                    </span>
+                  <h3 className="font-display text-lg font-bold text-foreground">
+                    {trek.name}
+                  </h3>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">{trek.duration}</span>
+                    <span className="font-bold text-cyan">{trek.price}</span>
                   </div>
-
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Mountain className="w-4 h-4 text-cyan" />
-                      {trek.altitude}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span className="text-cyan">⏱</span>
-                      {trek.duration}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-1">
-                    <span className="font-display font-bold text-lg text-cyan">
-                      {trek.price}
-                    </span>
-                    <Button
-                      data-ocid={`treks.button.${i + 1}`}
-                      size="sm"
-                      className="rounded-full text-xs font-bold tracking-wider"
-                      style={{
-                        background: "oklch(0.85 0.13 192 / 0.15)",
-                        border: "1px solid oklch(0.85 0.13 192 / 0.4)",
-                        color: "oklch(0.85 0.13 192)",
-                      }}
-                    >
-                      View Trek
-                    </Button>
-                  </div>
+                  <Button
+                    onClick={() => openPackagesCatalog()}
+                    className="w-full"
+                    style={{
+                      background: "oklch(var(--brand-blue))",
+                      color: "oklch(0.985 0 0)",
+                    }}
+                  >
+                    View Trek
+                  </Button>
                 </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* INTERACTIVE TREK JOURNEY */}
-      <section id="journey" className="py-24" ref={journeyRef}>
-        <div className="max-w-7xl mx-auto px-6">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-14"
-          >
-            <p className="text-cyan text-xs font-bold tracking-[0.3em] uppercase mb-3">
-              ROUTE MAP
-            </p>
-            <h2
-              className="font-display font-extrabold text-foreground"
-              style={{ fontSize: "clamp(32px, 4vw, 54px)" }}
-            >
-              The Journey
-            </h2>
-            <p className="text-muted-foreground mt-3">
-              From basecamp to summit — every step mapped.
-            </p>
-          </motion.div>
-
-          <div
-            className="glass-card rounded-2xl p-8 overflow-x-auto"
-            style={{
-              boxShadow: "0 0 60px oklch(0.85 0.13 192 / 0.06)",
-            }}
-          >
-            <svg
-              role="img"
-              aria-label="Trek route from Manali to Friendship Peak summit"
-              viewBox="0 0 720 260"
-              className="w-full"
-              style={{ minWidth: "480px" }}
-            >
-              <defs>
-                <linearGradient id="pathGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop
-                    offset="0%"
-                    stopColor="oklch(0.85 0.13 192)"
-                    stopOpacity="0.15"
-                  />
-                  <stop
-                    offset="100%"
-                    stopColor="oklch(0.85 0.13 192)"
-                    stopOpacity="0"
-                  />
-                </linearGradient>
-              </defs>
-
-              <path
-                d="M 80 200 Q 150 175 220 150 Q 290 125 360 100 Q 430 75 500 60 Q 560 45 620 30 L 620 240 L 80 240 Z"
-                fill="url(#pathGrad)"
-              />
-
-              <path
-                d="M 80 200 Q 150 175 220 150 Q 290 125 360 100 Q 430 75 500 60 Q 560 45 620 30"
-                fill="none"
-                stroke="oklch(0.85 0.13 192)"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                className={journeyVisible ? "animate-path" : ""}
-                style={{ strokeDasharray: 1000, strokeDashoffset: 1000 }}
-              />
-
-              <line
-                x1="60"
-                y1="240"
-                x2="660"
-                y2="240"
-                stroke="oklch(0.31 0.03 230 / 0.4)"
-                strokeWidth="1"
-              />
-
-              {JOURNEY_WAYPOINTS.map((pt) => (
-                <g key={pt.day}>
-                  <circle
-                    cx={pt.x}
-                    cy={pt.y}
-                    r="14"
-                    fill={
-                      pt.isSummit
-                        ? "oklch(0.75 0.14 55 / 0.15)"
-                        : "oklch(0.85 0.13 192 / 0.1)"
-                    }
-                    stroke="none"
-                  />
-                  <circle
-                    cx={pt.x}
-                    cy={pt.y}
-                    r="8"
-                    fill={
-                      pt.isSummit
-                        ? "oklch(0.75 0.14 55)"
-                        : "oklch(0.16 0.025 232)"
-                    }
-                    stroke={
-                      pt.isSummit
-                        ? "oklch(0.75 0.14 55)"
-                        : "oklch(0.85 0.13 192)"
-                    }
-                    strokeWidth="2"
-                  />
-                  <text
-                    x={pt.x}
-                    y={pt.y + 30}
-                    textAnchor="middle"
-                    fill="oklch(0.85 0.13 192)"
-                    fontSize="10"
-                    fontWeight="700"
-                    fontFamily="Bricolage Grotesque, sans-serif"
-                  >
-                    {pt.day}
-                  </text>
-                  <text
-                    x={pt.x}
-                    y={pt.y + 44}
-                    textAnchor="middle"
-                    fill="oklch(0.75 0.03 220)"
-                    fontSize="9"
-                    fontFamily="Plus Jakarta Sans, sans-serif"
-                  >
-                    {pt.label}
-                  </text>
-                  <text
-                    x={pt.x}
-                    y={pt.y - 18}
-                    textAnchor="middle"
-                    fill={
-                      pt.isSummit
-                        ? "oklch(0.75 0.14 55)"
-                        : "oklch(0.75 0.03 220)"
-                    }
-                    fontSize="9"
-                    fontFamily="Plus Jakarta Sans, sans-serif"
-                  >
-                    {pt.elevation}
-                  </text>
-                </g>
-              ))}
-            </svg>
-          </div>
-        </div>
-      </section>
-
-      {/* EXPERIENCE SECTION */}
-      <section id="experience" className="py-24">
-        <div className="max-w-7xl mx-auto px-6">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-16"
-          >
-            <p className="text-cyan text-xs font-bold tracking-[0.3em] uppercase mb-3">
-              STORIES
-            </p>
-            <h2
-              className="font-display font-extrabold text-foreground"
-              style={{ fontSize: "clamp(32px, 4vw, 54px)" }}
-            >
-              The Experience
-            </h2>
-          </motion.div>
-
-          <div className="space-y-20">
-            {EXPERIENCES.map((exp, i) => (
-              <motion.div
-                key={exp.label}
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-80px" }}
-                transition={{ duration: 0.7 }}
-                className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center"
-              >
-                {i % 2 === 1 ? (
-                  <>
-                    <div className="space-y-5 order-2 lg:order-2">
-                      <p className="text-cyan text-xs font-bold tracking-[0.3em] uppercase">
-                        0{i + 1}
-                      </p>
-                      <h3
-                        className="font-display font-extrabold text-foreground italic"
-                        style={{ fontSize: "clamp(24px, 3vw, 40px)" }}
-                      >
-                        {exp.label}
-                      </h3>
-                      <p className="text-muted-foreground leading-relaxed text-lg">
-                        {exp.text}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl overflow-hidden order-1 lg:order-1">
-                      <img
-                        src={exp.image}
-                        alt={exp.label}
-                        className="w-full h-72 lg:h-96 object-cover"
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="space-y-5">
-                      <p className="text-cyan text-xs font-bold tracking-[0.3em] uppercase">
-                        0{i + 1}
-                      </p>
-                      <h3
-                        className="font-display font-extrabold text-foreground italic"
-                        style={{ fontSize: "clamp(24px, 3vw, 40px)" }}
-                      >
-                        {exp.label}
-                      </h3>
-                      <p className="text-muted-foreground leading-relaxed text-lg">
-                        {exp.text}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl overflow-hidden">
-                      <img
-                        src={exp.image}
-                        alt={exp.label}
-                        className="w-full h-72 lg:h-96 object-cover"
-                      />
-                    </div>
-                  </>
-                )}
               </motion.div>
             ))}
           </div>
@@ -944,17 +1088,22 @@ export default function HomePage({
             className="text-center mb-14"
           >
             <p className="text-cyan text-xs font-bold tracking-[0.3em] uppercase mb-3">
-              OUR EDGE
+              Our benefit lists
             </p>
             <h2
               className="font-display font-extrabold text-foreground"
               style={{ fontSize: "clamp(32px, 4vw, 54px)" }}
             >
-              Why Choose Us
+              Why Choose Mountain Explorers
             </h2>
+            <p className="text-muted-foreground mt-4 max-w-4xl mx-auto leading-relaxed">
+              We manage trekking, camping, hiking & family tour packages across
+              India in affordable costing. We ensure best service along with one
+              to one assistance to each participant.
+            </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {WHY_FEATURES.map((feat, i) => (
               <motion.div
                 key={feat.title}
@@ -971,8 +1120,8 @@ export default function HomePage({
                 <div
                   className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-all group-hover:scale-110"
                   style={{
-                    background: "oklch(0.85 0.13 192 / 0.1)",
-                    border: "1px solid oklch(0.85 0.13 192 / 0.3)",
+                    background: "oklch(var(--brand-blue) / 0.1)",
+                    border: "1px solid oklch(var(--brand-blue) / 0.3)",
                   }}
                 >
                   <feat.icon className="w-5 h-5 text-cyan" />
@@ -990,38 +1139,104 @@ export default function HomePage({
       </section>
 
       {/* TESTIMONIALS */}
-      <section className="py-24">
+      <section id="testimonials" className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-6">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="text-center mb-14"
+            className="text-center mb-12"
           >
-            <p className="text-cyan text-xs font-bold tracking-[0.3em] uppercase mb-3">
-              REVIEWS
+            <p className="text-cyan italic text-xl sm:text-2xl mb-2">
+              Testimonials & reviews
             </p>
             <h2
               className="font-display font-extrabold text-foreground"
               style={{ fontSize: "clamp(32px, 4vw, 54px)" }}
             >
-              What Trekkers Say
+              What They&apos;re Saying
             </h2>
           </motion.div>
 
+          <div className="relative mb-10">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label="Previous testimonials"
+              className="hidden md:inline-flex rounded-full absolute left-0 top-1/2 -translate-y-1/2 z-10"
+              onClick={showPrevTestimonial}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label="Next testimonials"
+              className="hidden md:inline-flex rounded-full absolute right-0 top-1/2 -translate-y-1/2 z-10"
+              onClick={showNextTestimonial}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:px-14">
+              {visibleTestimonials.map((t, i) => (
+                <motion.div
+                  key={`${t.name}-avatar`}
+                  initial={{ opacity: 0, y: 24 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.45, delay: i * 0.08 }}
+                  className={`justify-center ${i === 0 ? "flex" : "hidden md:flex"}`}
+                >
+                  <img
+                    src={t.image}
+                    alt={t.name}
+                    className="h-40 w-40 md:h-44 md:w-44 rounded-full object-cover"
+                    loading="lazy"
+                  />
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-center gap-3 mb-6 md:hidden">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label="Previous testimonials"
+              className="rounded-full"
+              onClick={showPrevTestimonial}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label="Next testimonials"
+              className="rounded-full"
+              onClick={showNextTestimonial}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {TESTIMONIALS.map((t, i) => (
+            {visibleTestimonials.map((t, i) => (
               <motion.div
-                key={t.name}
+                key={`${t.name}-${testimonialStart}`}
                 data-ocid={`testimonials.item.${i + 1}`}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: i * 0.1 }}
-                className="glass-card rounded-2xl p-6 space-y-4"
+                className={`rounded-xl bg-white p-7 text-center shadow-[0_16px_32px_oklch(0.2_0.02_248/0.08)] ${i === 0 ? "block" : "hidden md:block"}`}
               >
-                <div className="flex items-center gap-1">
+                <div className="flex items-center justify-center gap-1 mb-4">
                   {[...Array(5)].map((_, j) => (
                     <Star
                       key={`star-${t.name}-${j}`}
@@ -1033,158 +1248,170 @@ export default function HomePage({
                     />
                   ))}
                 </div>
-                <p className="text-foreground leading-relaxed italic">
-                  &ldquo;{t.quote}&rdquo;
+                <p className="text-foreground leading-relaxed text-lg font-medium mb-5">
+                  {t.quote}
                 </p>
-                <div className="flex items-center gap-3 pt-2">
-                  <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm text-white"
-                    style={{ background: t.color }}
-                  >
-                    {t.initials}
-                  </div>
-                  <div>
-                    <p className="font-semibold text-foreground text-sm">
-                      {t.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {t.location}
-                    </p>
-                  </div>
-                </div>
+                <p className="font-extrabold text-foreground text-2xl">{t.name}</p>
+                <p className="text-sm uppercase tracking-[0.15em] text-cyan font-semibold mt-1">
+                  {t.role}
+                </p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* BOOKING PREVIEW */}
-      <section id="book" className="py-24">
+      {/* DISCOUNT + PLAN YOUR TRIP */}
+      <section className="py-16">
         <div className="max-w-7xl mx-auto px-6">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-14"
+          <div
+            className="rounded-3xl overflow-hidden border"
+            style={{ borderColor: "oklch(0.88 0.02 248 / 0.6)" }}
           >
-            <p className="text-cyan text-xs font-bold tracking-[0.3em] uppercase mb-3">
-              GET STARTED
-            </p>
-            <h2
-              className="font-display font-extrabold text-foreground"
-              style={{ fontSize: "clamp(32px, 4vw, 54px)" }}
-            >
-              Ready to Summit?
-            </h2>
-          </motion.div>
-
-          <div className="relative flex justify-center">
-            <div className="absolute -top-16 right-1/4 w-48 h-48 opacity-20 animate-float hidden lg:block pointer-events-none">
-              <img
-                src={heroMountains}
-                alt=""
-                aria-hidden="true"
-                className="w-full h-full object-contain"
-              />
-            </div>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-              className="glass-card rounded-3xl p-8 max-w-md w-full"
-              style={{
-                boxShadow:
-                  "0 0 60px oklch(0.85 0.13 192 / 0.12), 0 0 0 1px oklch(0.85 0.13 192 / 0.2)",
-              }}
-            >
-              <div className="text-center mb-6">
-                <h3 className="font-display font-extrabold text-2xl text-foreground mb-1">
-                  Friendship Peak Expedition
-                </h3>
-                <div
-                  className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs"
-                  style={{
-                    background: "oklch(0.75 0.14 55 / 0.15)",
-                    color: "oklch(0.75 0.14 55)",
-                    border: "1px solid oklch(0.75 0.14 55 / 0.3)",
-                  }}
-                >
-                  8 Days / 7 Nights
-                </div>
-                <div className="mt-4">
-                  <span className="font-display font-extrabold text-4xl text-cyan">
-                    ₹28,500
-                  </span>
-                  <span className="text-muted-foreground text-sm">
-                    {" "}
-                    / person
-                  </span>
-                </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2">
+              <div className="relative min-h-[320px] lg:min-h-[420px]">
+                <img
+                  src="/assets/paris.jpg"
+                  alt="30 percent discount tour promotion"
+                  className="absolute inset-0 h-full w-full object-cover"
+                  loading="lazy"
+                />
               </div>
 
-              <div className="space-y-2 mb-6">
-                {[
-                  "Accommodation (tents + guesthouses)",
-                  "All meals (breakfast, lunch, dinner)",
-                  "Expert mountain guides",
-                  "Trekking permits & forest fees",
-                  "Safety equipment & first aid",
-                  "Airport transfers",
-                ].map((item) => (
-                  <div key={item} className="flex items-center gap-2.5 text-sm">
-                    <span className="text-cyan font-bold">✓</span>
-                    <span className="text-foreground">{item}</span>
+              <div className="bg-white px-6 py-8 sm:px-8 sm:py-10 lg:px-10 lg:py-12">
+                <p className="text-cyan text-xs font-bold tracking-[0.3em] uppercase mb-3">
+                  Get to know us
+                </p>
+                <h2
+                  className="font-display font-extrabold text-foreground mb-4"
+                  style={{ fontSize: "clamp(30px, 4vw, 50px)" }}
+                >
+                  Plan your trip with Mountain Explorers
+                </h2>
+                <p className="text-muted-foreground leading-relaxed mb-8">
+                  Explore a wide variety of events such as hiking, mountain
+                  staycation, cycling, family tours, cultural tours and many
+                  more.
+                </p>
+
+                <div className="space-y-3 mb-8">
+                  {PLAN_BENEFITS.map((item) => (
+                    <div key={item} className="flex items-start gap-2.5">
+                      <CheckCircle2
+                        className="w-4 h-4 mt-0.5 shrink-0"
+                        style={{ color: "oklch(var(--brand-blue))" }}
+                      />
+                      <span className="text-foreground">{item}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <Button
+                  onClick={() => openPackagesCatalog()}
+                  className="pill-btn px-8"
+                  style={{
+                    background: "oklch(var(--brand-blue))",
+                    color: "oklch(0.985 0 0)",
+                    fontWeight: 700,
+                  }}
+                >
+                  Book with us now
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* LEADING TRAVEL COMPANY */}
+      <section className="py-8">
+        <div className="max-w-7xl mx-auto px-6">
+          <div
+            className="relative overflow-hidden rounded-2xl border"
+            style={{
+              borderColor: "oklch(0.88 0.02 248 / 0.45)",
+              backgroundImage:
+                "linear-gradient(oklch(0.12 0.02 255 / 0.78), oklch(0.12 0.02 255 / 0.78)), url('/assets/generated/hero-mountains.dim_1920x1080.jpg')",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr]">
+              <div className="px-6 py-8 sm:px-8 sm:py-10">
+                <button
+                  type="button"
+                  className="h-16 w-24 rounded-xl border border-white/40 bg-[oklch(var(--brand-blue))] text-white flex items-center justify-center mb-5"
+                  aria-label="Play"
+                >
+                  <Play className="w-8 h-8 fill-current" />
+                </button>
+                <p className="text-cyan italic text-xl sm:text-2xl mb-3">
+                  Are you ready to travel!
+                </p>
+                <h2 className="font-display text-white font-extrabold text-4xl leading-tight max-w-xl">
+                  Mountain explorers is India&apos;s leading travel company
+                </h2>
+              </div>
+              <div className="grid grid-cols-2 border-t lg:border-t-0 lg:border-l border-[oklch(0.75_0.01_248/0.35)]">
+                {LEADING_TRAVEL_FEATURES.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <div
+                      key={item.title}
+                      className="border-[oklch(0.75_0.01_248/0.35)] border-r even:border-r-0 border-b even:border-b last:border-b-0 p-6 flex flex-col justify-center items-center text-center gap-3 min-h-[140px]"
+                    >
+                      <Icon className="w-10 h-10 text-[oklch(var(--brand-blue))]" />
+                      <p className="text-white font-bold text-2xl leading-tight">
+                        {item.title}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* OUR PARTNERS */}
+      <section className="py-8">
+        <div className="max-w-7xl mx-auto px-6">
+          <div
+            className="rounded-2xl px-6 py-8 sm:px-10 sm:py-10"
+            style={{
+              background:
+                "linear-gradient(135deg, oklch(var(--brand-blue)) 0%, oklch(0.58 0.17 245) 100%)",
+            }}
+          >
+            <div className="flex flex-col lg:flex-row lg:items-center gap-6 lg:gap-10">
+              <h3 className="font-display text-white text-4xl font-extrabold whitespace-nowrap">
+                Our Partners
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 flex-1">
+                {PARTNER_LOGOS.map((logoPath) => (
+                  <div
+                    key={logoPath}
+                    className="rounded-md bg-white/90 p-2 h-20 flex items-center justify-center"
+                  >
+                    <img
+                      src={logoPath}
+                      alt="Partner logo"
+                      className="max-h-full w-auto object-contain"
+                      loading="lazy"
+                    />
                   </div>
                 ))}
               </div>
-
-              <div className="mb-4">
-                <p className="text-xs text-muted-foreground mb-2">
-                  Not included:
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {["Personal gear", "Travel insurance", "Tips"].map((item) => (
-                    <span
-                      key={item}
-                      className="text-xs text-muted-foreground px-2 py-0.5 rounded"
-                      style={{
-                        background: "oklch(0.22 0.025 230)",
-                      }}
-                    >
-                      {item}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <Button
-                data-ocid="booking.primary_button"
-                onClick={() => openPackagesCatalog()}
-                className="w-full pill-btn font-bold tracking-wider text-base py-3"
-                style={{
-                  background: "oklch(0.85 0.13 192)",
-                  color: "oklch(0.13 0.04 195)",
-                  boxShadow: "0 0 30px oklch(0.85 0.13 192 / 0.35)",
-                }}
-              >
-                Book Your Trek
-              </Button>
-
-              <p className="text-center text-xs text-muted-foreground mt-3">
-                Limited to 8 trekkers per batch • Next departure: April 15, 2026
-              </p>
-            </motion.div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* FOOTER */}
       <footer
+        id="contact"
         className="pt-16 pb-8"
-        style={{ borderTop: "1px solid oklch(0.31 0.03 230 / 0.4)" }}
+        style={{ borderTop: "1px solid oklch(0.88 0.02 248 / 0.45)" }}
       >
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 mb-12">
@@ -1217,8 +1444,8 @@ export default function HomePage({
                       aria-label={social.label}
                       className="w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110"
                       style={{
-                        background: "oklch(0.22 0.025 230)",
-                        border: "1px solid oklch(0.31 0.03 230 / 0.5)",
+                        background: "oklch(0.965 0.012 248)",
+                        border: "1px solid oklch(0.88 0.02 248 / 0.6)",
                       }}
                     >
                       <Icon className="w-4 h-4 text-muted-foreground" />
@@ -1259,7 +1486,7 @@ export default function HomePage({
 
           <div
             className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground"
-            style={{ borderTop: "1px solid oklch(0.31 0.03 230 / 0.3)" }}
+            style={{ borderTop: "1px solid oklch(0.88 0.02 248 / 0.5)" }}
           >
             <span>
               © {new Date().getFullYear()} Mountain Explorers India. All rights
@@ -1270,32 +1497,6 @@ export default function HomePage({
         </div>
       </footer>
 
-      {/* FLOATING CTA */}
-      <AnimatePresence>
-        {showFloatingCTA && (
-          <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            transition={{ duration: 0.3 }}
-            className="fixed bottom-6 right-6 z-50"
-          >
-            <Button
-              data-ocid="floating.primary_button"
-              onClick={() => openPackagesCatalog()}
-              className="pill-btn font-bold shadow-2xl"
-              style={{
-                background: "oklch(0.85 0.13 192)",
-                color: "oklch(0.13 0.04 195)",
-                boxShadow:
-                  "0 0 30px oklch(0.85 0.13 192 / 0.5), 0 4px 20px oklch(0 0 0 / 0.4)",
-              }}
-            >
-              🏔 Browse packages
-            </Button>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

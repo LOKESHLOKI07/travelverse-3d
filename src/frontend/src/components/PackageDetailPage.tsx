@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+import { FixedBatchSeatBadge } from "@/components/FixedBatchSeatBadge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -17,7 +17,11 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { CategoryView, PrivateCfg, TourPackage } from "../backend";
 import type { Page } from "../types";
-import type { TourPackageListing } from "../utils/catalogListing";
+import {
+  getListingKind,
+  stayFullDescriptionText,
+  type TourPackageListing,
+} from "../utils/catalogListing";
 import { findPackageById, packagePriceHint } from "../utils/unifiedCatalog";
 
 interface Props {
@@ -28,7 +32,7 @@ interface Props {
 
 const TIER_COLOR_CYCLE = [
   "oklch(0.65 0.12 192)",
-  "oklch(0.75 0.14 55)",
+  "oklch(var(--brand-coral))",
   "oklch(0.72 0.18 320)",
 ];
 
@@ -40,31 +44,6 @@ function privateCfgOf(p: TourPackage): PrivateCfg {
 function fixedCfgOf(p: TourPackage) {
   if (!("fixed" in p.detail)) throw new Error("Expected fixed package");
   return p.detail.fixed;
-}
-
-function SeatBadge({ seats }: { seats: number }) {
-  if (seats === 0)
-    return (
-      <Badge style={{ background: "oklch(0.45 0.18 25)", color: "white" }}>
-        Sold Out
-      </Badge>
-    );
-  if (seats <= 5)
-    return (
-      <Badge
-        style={{
-          background: "oklch(0.6 0.18 55)",
-          color: "oklch(0.1 0.02 55)",
-        }}
-      >
-        {seats} seats left
-      </Badge>
-    );
-  return (
-    <Badge style={{ background: "oklch(0.55 0.18 145)", color: "white" }}>
-      {seats} seats
-    </Badge>
-  );
 }
 
 export default function PackageDetailPage({
@@ -90,6 +69,7 @@ export default function PackageDetailPage({
     batch: {
       date: string;
       seats: number;
+      seatsTotal: number;
       batchId?: bigint;
     };
   } | null>(null);
@@ -126,6 +106,14 @@ export default function PackageDetailPage({
 
   const isPrivate = Boolean(pkg && "private" in pkg.detail);
   const isFixed = Boolean(pkg && "fixed" in pkg.detail);
+  const isPrivateTourPackage = Boolean(
+    pkg && isPrivate && getListingKind(pkg) === "private",
+  );
+
+  const privateItineraryDays = useMemo(() => {
+    if (!pkg || !isPrivateTourPackage) return [];
+    return (privateCfgOf(pkg).itineraryDays ?? []).map(String);
+  }, [pkg, isPrivateTourPackage]);
 
   const effectiveTiers = useMemo(() => {
     if (!pkg || !isPrivate) return [];
@@ -229,9 +217,11 @@ export default function PackageDetailPage({
       image: thumb || pkg.heroImageUrl,
       duration: pkg.shortDescription,
       packageId: pkg.id,
+      inclusions: f.inclusions ?? [],
       batches: f.batches.map((b) => ({
         date: b.dateLabel,
         seats: Number(b.seatsRemaining),
+        seatsTotal: Number(b.seatsTotal),
         batchId: b.batchId,
       })),
     };
@@ -293,6 +283,11 @@ export default function PackageDetailPage({
   }
 
   const tl = pkg as TourPackageListing;
+  const listingKindForStay = getListingKind(pkg);
+  const stayLongDescription =
+    listingKindForStay === "hotel" || listingKindForStay === "villa"
+      ? stayFullDescriptionText(tl.longDescription)
+      : "";
   const heroImg =
     String(tl.thumbnailUrl ?? "").trim() || pkg.heroImageUrl;
   const hint = packagePriceHint(pkg);
@@ -302,13 +297,13 @@ export default function PackageDetailPage({
       className="min-h-screen"
       style={{
         background:
-          "linear-gradient(160deg, oklch(0.13 0.025 232) 0%, oklch(0.09 0.018 232) 100%)",
+          "var(--app-page-gradient)",
       }}
     >
       <header
-        className="sticky top-0 z-40 border-b border-white/10"
+        className="sticky top-0 z-40 border-b border-border"
         style={{
-          background: "oklch(0.11 0.025 232 / 0.95)",
+          background: "oklch(0.99 0.006 248 / 0.92)",
           backdropFilter: "blur(20px)",
         }}
       >
@@ -321,7 +316,7 @@ export default function PackageDetailPage({
             <ArrowLeft className="w-4 h-4" />
             <span className="text-sm">All packages</span>
           </button>
-          <div className="h-5 w-px bg-white/20" />
+          <div className="h-5 w-px bg-border" />
           <button
             type="button"
             onClick={() => setPage("home")}
@@ -338,7 +333,7 @@ export default function PackageDetailPage({
           animate={{ opacity: 1, y: 0 }}
           className="grid lg:grid-cols-2 gap-10 mb-12"
         >
-          <div className="rounded-2xl overflow-hidden border border-white/10 h-64 lg:h-80">
+          <div className="rounded-2xl overflow-hidden border border-border h-64 lg:h-80">
             <img
               src={heroImg}
               alt=""
@@ -355,26 +350,60 @@ export default function PackageDetailPage({
             {hint ? (
               <p
                 className="text-xl font-bold mb-6"
-                style={{ color: "oklch(0.85 0.13 192)" }}
+                style={{ color: "oklch(var(--brand-blue))" }}
               >
                 {hint}
               </p>
             ) : null}
             <p className="text-sm text-muted-foreground max-w-xl">
-              Configure options below, then book. Pricing and add-ons are set by
-              our team in the catalog — you always see the live totals here.
+              {listingKindForStay === "hotel" ? (
+                <>
+                  Choose a room type and group size below, then book. Prices and
+                  add-ons follow your live catalog entry.
+                </>
+              ) : listingKindForStay === "villa" ? (
+                <>
+                  Choose your stay option and group size below, then book.
+                  Prices and add-ons follow your live catalog entry.
+                </>
+              ) : (
+                <>
+                  Configure options below, then book. Pricing and add-ons are
+                  set by our team in the catalog — you always see the live
+                  totals here.
+                </>
+              )}
             </p>
           </div>
         </motion.div>
+
+        {stayLongDescription ? (
+          <div
+            className="mb-10 rounded-2xl p-6 md:p-8 border border-border"
+            style={{
+              background: "oklch(0.98 0.008 248 / 0.72)",
+              backdropFilter: "blur(10px)",
+            }}
+          >
+            <h2 className="font-display font-bold text-xl md:text-2xl mb-4">
+              {listingKindForStay === "hotel"
+                ? "About this hotel"
+                : "About this villa & farm stay"}
+            </h2>
+            <div className="text-muted-foreground leading-relaxed whitespace-pre-wrap text-sm md:text-base max-w-3xl">
+              {stayLongDescription}
+            </div>
+          </div>
+        ) : null}
 
         {isPrivate && (
           <>
             <div className="grid lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 space-y-8">
                 <div
-                  className="rounded-2xl p-6 border border-white/10"
+                  className="rounded-2xl p-6 border border-border"
                   style={{
-                    background: "oklch(0.16 0.025 232 / 0.6)",
+                    background: "oklch(0.98 0.008 248 / 0.72)",
                     backdropFilter: "blur(10px)",
                   }}
                 >
@@ -392,11 +421,11 @@ export default function PackageDetailPage({
                           borderColor:
                             selectedTier === i
                               ? tier.color
-                              : "oklch(0.3 0.03 232 / 0.5)",
+                              : "oklch(0.88 0.02 248 / 0.6)",
                           background:
                             selectedTier === i
-                              ? "oklch(0.16 0.025 232)"
-                              : "oklch(0.14 0.02 232 / 0.4)",
+                              ? "oklch(0.98 0.009 248)"
+                              : "oklch(0.15 0.038 228 / 0.4)",
                         }}
                       >
                         <div
@@ -405,7 +434,7 @@ export default function PackageDetailPage({
                             color:
                               selectedTier === i
                                 ? tier.color
-                                : "oklch(0.75 0.02 232)",
+                                : "oklch(0.76 0.03 228)",
                           }}
                         >
                           {tier.label}
@@ -423,9 +452,9 @@ export default function PackageDetailPage({
                 </div>
 
                 <div
-                  className="rounded-2xl p-6 border border-white/10"
+                  className="rounded-2xl p-6 border border-border"
                   style={{
-                    background: "oklch(0.16 0.025 232 / 0.6)",
+                    background: "oklch(0.98 0.008 248 / 0.72)",
                     backdropFilter: "blur(10px)",
                   }}
                 >
@@ -435,7 +464,7 @@ export default function PackageDetailPage({
                   <div className="flex items-center gap-4 mb-4">
                     <Users
                       className="w-5 h-5"
-                      style={{ color: "oklch(0.85 0.13 192)" }}
+                      style={{ color: "oklch(var(--brand-blue))" }}
                     />
                     <span className="text-3xl font-bold">{groupSize}</span>
                     <span className="text-muted-foreground">people</span>
@@ -449,11 +478,43 @@ export default function PackageDetailPage({
                   />
                 </div>
 
+                {privateItineraryDays.length > 0 ? (
+                  <div
+                    className="rounded-2xl p-6 border border-border"
+                    style={{
+                      background: "oklch(0.98 0.008 248 / 0.72)",
+                      backdropFilter: "blur(10px)",
+                    }}
+                  >
+                    <h2 className="font-display font-bold text-xl mb-4">
+                      Day-by-day plan
+                    </h2>
+                    <ol className="space-y-4">
+                      {privateItineraryDays.map((desc, i) => (
+                        <li
+                          key={`${i}-${desc.slice(0, 20)}`}
+                          className="flex gap-3 text-sm"
+                        >
+                          <span
+                            className="shrink-0 font-bold w-14"
+                            style={{ color: "oklch(var(--brand-blue))" }}
+                          >
+                            Day {i + 1}
+                          </span>
+                          <span className="text-muted-foreground leading-relaxed">
+                            {desc}
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                ) : null}
+
                 {effectiveAddOns.length > 0 ? (
                   <div
-                    className="rounded-2xl p-6 border border-white/10"
+                    className="rounded-2xl p-6 border border-border"
                     style={{
-                      background: "oklch(0.16 0.025 232 / 0.6)",
+                      background: "oklch(0.98 0.008 248 / 0.72)",
                       backdropFilter: "blur(10px)",
                     }}
                   >
@@ -468,8 +529,8 @@ export default function PackageDetailPage({
                           className="flex items-center gap-3 rounded-xl p-4 cursor-pointer border"
                           style={{
                             borderColor: selectedAddOns.includes(addOn.id)
-                              ? "oklch(0.85 0.13 192 / 0.5)"
-                              : "oklch(0.25 0.03 232 / 0.5)",
+                              ? "oklch(var(--brand-blue) / 0.5)"
+                              : "oklch(0.26 0.04 228 / 0.5)",
                           }}
                         >
                           <Checkbox
@@ -483,7 +544,7 @@ export default function PackageDetailPage({
                             </div>
                             <div
                               className="text-xs"
-                              style={{ color: "oklch(0.75 0.14 55)" }}
+                              style={{ color: "oklch(var(--brand-coral))" }}
                             >
                               +₹{addOn.price.toLocaleString("en-IN")}/person
                             </div>
@@ -497,9 +558,9 @@ export default function PackageDetailPage({
 
               <div>
                 <div
-                  className="sticky top-24 rounded-2xl p-6 border border-white/10"
+                  className="sticky top-24 rounded-2xl p-6 border border-border"
                   style={{
-                    background: "oklch(0.16 0.025 232 / 0.8)",
+                    background: "oklch(0.99 0.006 248 / 0.88)",
                     backdropFilter: "blur(10px)",
                   }}
                 >
@@ -526,8 +587,8 @@ export default function PackageDetailPage({
                     className="w-full font-bold"
                     onClick={() => setBookingOpen(true)}
                     style={{
-                      background: "oklch(0.85 0.13 192)",
-                      color: "oklch(0.13 0.04 195)",
+                      background: "oklch(var(--brand-blue))",
+                      color: "oklch(0.985 0.005 85)",
                     }}
                   >
                     Book now
@@ -540,8 +601,8 @@ export default function PackageDetailPage({
               <DialogContent
                 className="sm:max-w-md"
                 style={{
-                  background: "oklch(0.14 0.025 232)",
-                  border: "1px solid oklch(0.3 0.04 232 / 0.5)",
+                  background: "oklch(0.99 0.006 248)",
+                  border: "1px solid oklch(0.88 0.02 248 / 0.6)",
                 }}
               >
                 <DialogHeader>
@@ -558,7 +619,7 @@ export default function PackageDetailPage({
                     onChange={(e) =>
                       setForm((f) => ({ ...f, name: e.target.value }))
                     }
-                    className="bg-white/5 border-white/10"
+                    className="bg-muted/70 border-border"
                   />
                   <Label className="text-xs text-muted-foreground">Email</Label>
                   <Input
@@ -567,7 +628,7 @@ export default function PackageDetailPage({
                     onChange={(e) =>
                       setForm((f) => ({ ...f, email: e.target.value }))
                     }
-                    className="bg-white/5 border-white/10"
+                    className="bg-muted/70 border-border"
                   />
                   <Label className="text-xs text-muted-foreground">Phone</Label>
                   <Input
@@ -575,7 +636,7 @@ export default function PackageDetailPage({
                     onChange={(e) =>
                       setForm((f) => ({ ...f, phone: e.target.value }))
                     }
-                    className="bg-white/5 border-white/10"
+                    className="bg-muted/70 border-border"
                   />
                   <Label className="text-xs text-muted-foreground">
                     Preferred travel date
@@ -586,15 +647,15 @@ export default function PackageDetailPage({
                     onChange={(e) =>
                       setForm((f) => ({ ...f, date: e.target.value }))
                     }
-                    className="bg-white/5 border-white/10"
+                    className="bg-muted/70 border-border"
                   />
                   <Button
                     className="w-full font-bold mt-2"
                     disabled={loading}
                     onClick={() => void handlePrivateBook()}
                     style={{
-                      background: "oklch(0.85 0.13 192)",
-                      color: "oklch(0.13 0.04 195)",
+                      background: "oklch(var(--brand-blue))",
+                      color: "oklch(0.985 0.005 85)",
                     }}
                   >
                     {loading ? (
@@ -611,9 +672,9 @@ export default function PackageDetailPage({
 
         {isFixed && fixedDisplay && (
           <div
-            className="rounded-2xl overflow-hidden border border-white/10"
+            className="rounded-2xl overflow-hidden border border-border"
             style={{
-              background: "oklch(0.16 0.025 232 / 0.6)",
+              background: "oklch(0.98 0.008 248 / 0.72)",
               backdropFilter: "blur(10px)",
             }}
           >
@@ -639,7 +700,7 @@ export default function PackageDetailPage({
                   <div className="text-right">
                     <div
                       className="text-2xl font-black"
-                      style={{ color: "oklch(0.85 0.13 192)" }}
+                      style={{ color: "oklch(var(--brand-blue))" }}
                     >
                       ₹{fixedDisplay.price.toLocaleString("en-IN")}
                     </div>
@@ -648,6 +709,21 @@ export default function PackageDetailPage({
                     </div>
                   </div>
                 </div>
+                {fixedDisplay.inclusions.length > 0 ? (
+                  <div
+                    className="rounded-xl border border-border p-4 mb-4"
+                    style={{ background: "oklch(0.14 0.038 228 / 0.5)" }}
+                  >
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
+                      What&apos;s included
+                    </p>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-4">
+                      {fixedDisplay.inclusions.map((line, i) => (
+                        <li key={`${i}-${line}`}>{line}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
                 <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">
                   Choose a date
                 </p>
@@ -661,12 +737,17 @@ export default function PackageDetailPage({
                           batch.seats === 0
                             ? "oklch(0.25 0.04 25 / 0.5)"
                             : "oklch(0.25 0.04 192 / 0.5)",
-                        background: "oklch(0.13 0.02 232)",
+                        background: "oklch(0.15 0.04 228)",
                       }}
                     >
                       <div>
                         <div className="text-sm font-medium">{batch.date}</div>
-                        <SeatBadge seats={batch.seats} />
+                        <div className="mt-1">
+                          <FixedBatchSeatBadge
+                            remaining={batch.seats}
+                            total={batch.seatsTotal}
+                          />
+                        </div>
                       </div>
                       <Button
                         size="sm"
@@ -675,12 +756,12 @@ export default function PackageDetailPage({
                         style={{
                           background:
                             batch.seats === 0
-                              ? "oklch(0.25 0.02 232)"
-                              : "oklch(0.85 0.13 192)",
+                              ? "oklch(0.26 0.038 228)"
+                              : "oklch(var(--brand-blue))",
                           color:
                             batch.seats === 0
-                              ? "oklch(0.5 0.03 232)"
-                              : "oklch(0.13 0.04 195)",
+                              ? "oklch(0.52 0.04 228)"
+                              : "oklch(0.985 0.005 85)",
                           fontWeight: 700,
                         }}
                       >
@@ -708,14 +789,14 @@ export default function PackageDetailPage({
         <DialogContent
           className="sm:max-w-md"
           style={{
-            background: "oklch(0.14 0.025 232)",
-            border: "1px solid oklch(0.3 0.04 232 / 0.5)",
+            background: "oklch(0.99 0.006 248)",
+            border: "1px solid oklch(0.88 0.02 248 / 0.6)",
           }}
         >
           <DialogHeader>
             <DialogTitle>
               Book: {fixedDisplay?.name}{" "}
-              <span className="text-cyan-400">
+              <span className="text-cyan">
                 {bookingTarget?.batch.date}
               </span>
             </DialogTitle>
@@ -728,7 +809,7 @@ export default function PackageDetailPage({
                 onChange={(e) =>
                   setFixedForm((f) => ({ ...f, name: e.target.value }))
                 }
-                className="bg-white/5 border-white/10"
+                className="bg-muted/70 border-border"
               />
               <Input
                 type="email"
@@ -737,7 +818,7 @@ export default function PackageDetailPage({
                 onChange={(e) =>
                   setFixedForm((f) => ({ ...f, email: e.target.value }))
                 }
-                className="bg-white/5 border-white/10"
+                className="bg-muted/70 border-border"
               />
               <Input
                 placeholder="Phone"
@@ -745,15 +826,15 @@ export default function PackageDetailPage({
                 onChange={(e) =>
                   setFixedForm((f) => ({ ...f, phone: e.target.value }))
                 }
-                className="bg-white/5 border-white/10"
+                className="bg-muted/70 border-border"
               />
               <Button
                 className="w-full font-bold"
                 disabled={loading}
                 onClick={() => void handleFixedBook()}
                 style={{
-                  background: "oklch(0.85 0.13 192)",
-                  color: "oklch(0.13 0.04 195)",
+                  background: "oklch(var(--brand-blue))",
+                  color: "oklch(0.985 0.005 85)",
                 }}
               >
                 {loading ? (
@@ -767,7 +848,7 @@ export default function PackageDetailPage({
         </DialogContent>
       </Dialog>
 
-      <footer className="text-center py-8 mt-16 text-xs text-muted-foreground border-t border-white/10 max-w-7xl mx-auto">
+      <footer className="text-center py-8 mt-16 text-xs text-muted-foreground border-t border-border max-w-7xl mx-auto">
         <Mountain className="w-4 h-4 inline mr-1" />
         Mountain Explorers · © {new Date().getFullYear()}
       </footer>

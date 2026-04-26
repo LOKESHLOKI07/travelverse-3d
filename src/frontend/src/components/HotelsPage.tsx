@@ -26,6 +26,7 @@ import {
   packageForHotelsTab,
   packageForVillasPage,
   parseHotelRating,
+  stayFullDescriptionText,
   type TourPackageListing,
 } from "../utils/catalogListing";
 import type { Page } from "../types";
@@ -41,6 +42,7 @@ const HOTELS = [
       "https://images.unsplash.com/photo-1455587734955-081b22074882?w=600&fit=crop",
     location: "Manali, Himachal Pradesh",
     rating: 4.8,
+    about: "",
     rooms: [
       { type: "Standard", price: 3500 },
       { type: "Deluxe", price: 5500 },
@@ -53,6 +55,7 @@ const HOTELS = [
       "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&fit=crop",
     location: "Shimla, Himachal Pradesh",
     rating: 4.6,
+    about: "",
     rooms: [
       { type: "Standard", price: 4000 },
       { type: "Deluxe", price: 6500 },
@@ -70,6 +73,7 @@ const VILLAS = [
     pricePerPerson: 1200,
     weekdayMin: 8,
     weekendMin: 15,
+    about: "",
     amenities: ["Private Pool", "BBQ Deck", "Mountain View", "Chef on Request"],
   },
   {
@@ -80,6 +84,7 @@ const VILLAS = [
     pricePerPerson: 900,
     weekdayMin: 10,
     weekendMin: 20,
+    about: "",
     amenities: ["River View", "Bonfire Area", "Organic Garden", "Yoga Space"],
   },
 ];
@@ -90,6 +95,8 @@ type HotelDisplay = {
   image: string;
   location: string;
   rating: number;
+  /** Guest-facing narrative (hotels only in catalog). */
+  about: string;
   rooms: { type: string; price: number }[];
 };
 
@@ -118,6 +125,7 @@ function tourPackageToHotelDisplay(p: TourPackage): HotelDisplay {
     image: thumb || p.heroImageUrl,
     location: p.shortDescription,
     rating: parseHotelRating(tl.longDescription),
+    about: stayFullDescriptionText(tl.longDescription),
     rooms,
   };
 }
@@ -130,6 +138,8 @@ type VillaDisplay = {
   pricePerPerson: number;
   weekdayMin: number;
   weekendMin: number;
+  /** Long-form copy when set; otherwise amenity chips are used. */
+  about: string;
   amenities: string[];
   catalogPackageId?: bigint;
 };
@@ -147,12 +157,21 @@ function tourPackageToVillaDisplay(p: TourPackage): VillaDisplay {
   const minG = Number(pc.minGroupSize);
   const maxG = Number(pc.maxGroupSize);
   const tl = p as TourPackageListing;
-  const rawAmenities = (tl.longDescription ?? "")
+  const narrative = stayFullDescriptionText(tl.longDescription);
+  const useProse =
+    narrative.length > 100 ||
+    narrative.includes("\n") ||
+    (narrative.includes(".") && narrative.length > 72);
+  const raw = String(tl.longDescription ?? "");
+  const rawAmenities = raw
     .split(/[,\n]/)
     .map((s) => s.trim())
-    .filter(Boolean);
-  const amenities =
-    rawAmenities.length > 0 ? rawAmenities.slice(0, 12) : ["Private stay"];
+    .filter((s) => s.length > 0 && !/^\s*rating:\s*[\d.]+/i.test(s));
+  const amenities = useProse
+    ? []
+    : rawAmenities.length > 0
+      ? rawAmenities.slice(0, 12)
+      : ["Private stay"];
   const img = String(tl.thumbnailUrl ?? "").trim() || p.heroImageUrl;
   return {
     key: `c-${p.id}`,
@@ -162,6 +181,7 @@ function tourPackageToVillaDisplay(p: TourPackage): VillaDisplay {
     pricePerPerson: ppp,
     weekdayMin: minG,
     weekendMin: maxG > minG ? maxG : minG,
+    about: useProse ? narrative : "",
     amenities,
     catalogPackageId: p.id,
   };
@@ -256,6 +276,7 @@ export default function HotelsPage({ setPage }: Props) {
         image: h.image,
         location: h.location,
         rating: h.rating,
+        about: h.about,
         rooms: h.rooms.map((r) => ({ type: r.type, price: r.price })),
       })),
     [],
@@ -281,6 +302,7 @@ export default function HotelsPage({ setPage }: Props) {
         pricePerPerson: v.pricePerPerson,
         weekdayMin: v.weekdayMin,
         weekendMin: v.weekendMin,
+        about: v.about,
         amenities: v.amenities,
       })),
     [],
@@ -441,13 +463,13 @@ export default function HotelsPage({ setPage }: Props) {
       className="min-h-screen"
       style={{
         background:
-          "linear-gradient(160deg, oklch(0.13 0.025 232) 0%, oklch(0.09 0.018 232) 100%)",
+          "var(--app-page-gradient)",
       }}
     >
       <header
-        className="sticky top-0 z-40 border-b border-white/10"
+        className="sticky top-0 z-40 border-b border-border"
         style={{
-          background: "oklch(0.11 0.025 232 / 0.95)",
+          background: "oklch(0.99 0.006 248 / 0.92)",
           backdropFilter: "blur(20px)",
         }}
       >
@@ -461,10 +483,10 @@ export default function HotelsPage({ setPage }: Props) {
             <ArrowLeft className="w-4 h-4" />
             <span className="text-sm">Back</span>
           </button>
-          <div className="h-5 w-px bg-white/20" />
+          <div className="h-5 w-px bg-border" />
           <span className="font-display font-bold text-lg tracking-tight">
             Hotels &{" "}
-            <span style={{ color: "oklch(0.75 0.14 55)" }}>Villas</span>
+            <span style={{ color: "oklch(var(--brand-coral))" }}>Villas</span>
           </span>
         </div>
       </header>
@@ -478,20 +500,20 @@ export default function HotelsPage({ setPage }: Props) {
         >
           <p
             className="text-sm uppercase tracking-widest mb-3"
-            style={{ color: "oklch(0.85 0.13 192)" }}
+            style={{ color: "oklch(var(--brand-blue))" }}
           >
             Rest & Recharge
           </p>
           <h1 className="font-display text-4xl md:text-6xl font-black text-foreground mb-4">
             Hotels &<br />
-            <span style={{ color: "oklch(0.75 0.14 55)" }}>Villas</span>
+            <span style={{ color: "oklch(var(--brand-coral))" }}>Villas</span>
           </h1>
         </motion.div>
 
         <Tabs defaultValue="hotels" data-ocid="hotels.tab">
           <TabsList
             className="mb-8"
-            style={{ background: "oklch(0.16 0.025 232)" }}
+            style={{ background: "oklch(0.98 0.009 248)" }}
           >
             <TabsTrigger data-ocid="hotels.hotels.tab" value="hotels">
               Hotels
@@ -512,9 +534,9 @@ export default function HotelsPage({ setPage }: Props) {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: idx * 0.1 }}
-                    className="rounded-2xl overflow-hidden border border-white/10"
+                    className="rounded-2xl overflow-hidden border border-border"
                     style={{
-                      background: "oklch(0.16 0.025 232 / 0.6)",
+                      background: "oklch(0.98 0.008 248 / 0.72)",
                       backdropFilter: "blur(10px)",
                     }}
                   >
@@ -538,12 +560,17 @@ export default function HotelsPage({ setPage }: Props) {
                             <div className="flex items-center gap-1 mt-1">
                               <Star
                                 className="w-3.5 h-3.5"
-                                style={{ color: "oklch(0.75 0.14 55)" }}
+                                style={{ color: "oklch(var(--brand-coral))" }}
                               />
                               <span className="text-sm font-medium">
                                 {hotel.rating}
                               </span>
                             </div>
+                            {hotel.about ? (
+                              <p className="text-sm text-muted-foreground leading-relaxed mt-3 whitespace-pre-wrap">
+                                {hotel.about}
+                              </p>
+                            ) : null}
                           </div>
                         </div>
                         <div className="mb-4">
@@ -569,12 +596,12 @@ export default function HotelsPage({ setPage }: Props) {
                                 style={{
                                   borderColor:
                                     sel?.type === room.type
-                                      ? "oklch(0.85 0.13 192 / 0.7)"
-                                      : "oklch(0.25 0.03 232 / 0.5)",
+                                      ? "oklch(var(--brand-blue) / 0.7)"
+                                      : "oklch(0.26 0.04 228 / 0.5)",
                                   background:
                                     sel?.type === room.type
                                       ? "oklch(0.16 0.04 192 / 0.3)"
-                                      : "oklch(0.13 0.02 232)",
+                                      : "oklch(0.15 0.04 228)",
                                 }}
                               >
                                 <div className="font-medium text-sm">
@@ -582,7 +609,7 @@ export default function HotelsPage({ setPage }: Props) {
                                 </div>
                                 <div
                                   className="text-xs mt-0.5"
-                                  style={{ color: "oklch(0.85 0.13 192)" }}
+                                  style={{ color: "oklch(var(--brand-blue))" }}
                                 >
                                   ₹{room.price.toLocaleString("en-IN")}/night
                                 </div>
@@ -603,11 +630,11 @@ export default function HotelsPage({ setPage }: Props) {
                           }
                           style={{
                             background: sel
-                              ? "oklch(0.85 0.13 192)"
-                              : "oklch(0.25 0.02 232)",
+                              ? "oklch(var(--brand-blue))"
+                              : "oklch(0.26 0.038 228)",
                             color: sel
-                              ? "oklch(0.13 0.04 195)"
-                              : "oklch(0.5 0.03 232)",
+                              ? "oklch(0.985 0.005 85)"
+                              : "oklch(0.52 0.04 228)",
                             fontWeight: 700,
                           }}
                         >
@@ -630,9 +657,9 @@ export default function HotelsPage({ setPage }: Props) {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: idx * 0.1 }}
-                  className="rounded-2xl overflow-hidden border border-white/10"
+                  className="rounded-2xl overflow-hidden border border-border"
                   style={{
-                    background: "oklch(0.16 0.025 232 / 0.6)",
+                    background: "oklch(0.98 0.008 248 / 0.72)",
                     backdropFilter: "blur(10px)",
                   }}
                 >
@@ -646,13 +673,13 @@ export default function HotelsPage({ setPage }: Props) {
                       className="absolute inset-0"
                       style={{
                         background:
-                          "linear-gradient(to top, oklch(0.13 0.025 232 / 0.9), transparent)",
+                          "linear-gradient(to top, oklch(0.22 0.07 248 / 0.82), transparent)",
                       }}
                     />
                     <div className="absolute bottom-3 left-4">
                       <div
                         className="text-2xl font-black"
-                        style={{ color: "oklch(0.85 0.13 192)" }}
+                        style={{ color: "oklch(var(--brand-blue))" }}
                       >
                         ₹{villa.pricePerPerson.toLocaleString("en-IN")}
                       </div>
@@ -668,23 +695,29 @@ export default function HotelsPage({ setPage }: Props) {
                     <p className="text-sm text-muted-foreground mb-3">
                       {villa.location}
                     </p>
-                    <div className="flex flex-wrap gap-1.5 mb-4">
-                      {villa.amenities.map((a) => (
-                        <span
-                          key={a}
-                          className="text-xs px-2 py-1 rounded-full"
-                          style={{
-                            background: "oklch(0.2 0.03 232)",
-                            color: "oklch(0.75 0.05 232)",
-                          }}
-                        >
-                          {a}
-                        </span>
-                      ))}
-                    </div>
+                    {villa.about ? (
+                      <p className="text-sm text-muted-foreground leading-relaxed mb-4 whitespace-pre-wrap">
+                        {villa.about}
+                      </p>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5 mb-4">
+                        {villa.amenities.map((a) => (
+                          <span
+                            key={a}
+                            className="text-xs px-2 py-1 rounded-full"
+                            style={{
+                              background: "oklch(0.22 0.04 228)",
+                              color: "oklch(0.74 0.04 228)",
+                            }}
+                          >
+                            {a}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     <div
                       className="rounded-xl p-3 mb-4 text-xs"
-                      style={{ background: "oklch(0.13 0.02 232)" }}
+                      style={{ background: "oklch(0.15 0.04 228)" }}
                     >
                       <div className="flex justify-between mb-1">
                         <span className="flex items-center gap-1 text-muted-foreground">
@@ -710,8 +743,8 @@ export default function HotelsPage({ setPage }: Props) {
                       className="w-full font-bold"
                       onClick={() => setVillaBooking({ row: villa })}
                       style={{
-                        background: "oklch(0.85 0.13 192)",
-                        color: "oklch(0.13 0.04 195)",
+                        background: "oklch(var(--brand-blue))",
+                        color: "oklch(0.985 0.005 85)",
                       }}
                     >
                       Book Villa
@@ -733,14 +766,14 @@ export default function HotelsPage({ setPage }: Props) {
           data-ocid="hotels.hotel.dialog"
           className="sm:max-w-md"
           style={{
-            background: "oklch(0.14 0.025 232)",
-            border: "1px solid oklch(0.3 0.04 232 / 0.5)",
+            background: "oklch(0.99 0.006 248)",
+            border: "1px solid oklch(0.88 0.02 248 / 0.6)",
           }}
         >
           <DialogHeader>
             <DialogTitle className="font-display">
               {hotelBooking?.hotel.name} —{" "}
-              <span style={{ color: "oklch(0.85 0.13 192)" }}>
+              <span style={{ color: "oklch(var(--brand-blue))" }}>
                 {hotelBooking?.roomType}
               </span>
             </DialogTitle>
@@ -759,7 +792,7 @@ export default function HotelsPage({ setPage }: Props) {
                     onChange={(e) =>
                       setHotelForm((f) => ({ ...f, checkin: e.target.value }))
                     }
-                    className="bg-white/5 border-white/10"
+                    className="bg-muted/70 border-border"
                   />
                 </div>
                 <div>
@@ -773,7 +806,7 @@ export default function HotelsPage({ setPage }: Props) {
                     onChange={(e) =>
                       setHotelForm((f) => ({ ...f, checkout: e.target.value }))
                     }
-                    className="bg-white/5 border-white/10"
+                    className="bg-muted/70 border-border"
                   />
                 </div>
               </div>
@@ -793,13 +826,13 @@ export default function HotelsPage({ setPage }: Props) {
                       rooms: Math.max(1, Number.parseInt(e.target.value) || 1),
                     }))
                   }
-                  className="bg-white/5 border-white/10"
+                  className="bg-muted/70 border-border"
                 />
               </div>
               {hotelNights > 0 && (
                 <div
                   className="rounded-xl p-3 text-sm"
-                  style={{ background: "oklch(0.11 0.02 232)" }}
+                  style={{ background: "oklch(0.13 0.036 228)" }}
                 >
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">
@@ -812,7 +845,7 @@ export default function HotelsPage({ setPage }: Props) {
                     <span className="font-semibold">Total</span>
                     <span
                       className="font-bold"
-                      style={{ color: "oklch(0.85 0.13 192)" }}
+                      style={{ color: "oklch(var(--brand-blue))" }}
                     >
                       ₹{hotelTotal.toLocaleString("en-IN")}
                     </span>
@@ -831,7 +864,7 @@ export default function HotelsPage({ setPage }: Props) {
                     onChange={(e) =>
                       setHotelForm((f) => ({ ...f, name: e.target.value }))
                     }
-                    className="bg-white/5 border-white/10"
+                    className="bg-muted/70 border-border"
                   />
                 </div>
                 <div>
@@ -846,7 +879,7 @@ export default function HotelsPage({ setPage }: Props) {
                     onChange={(e) =>
                       setHotelForm((f) => ({ ...f, email: e.target.value }))
                     }
-                    className="bg-white/5 border-white/10"
+                    className="bg-muted/70 border-border"
                   />
                 </div>
                 <div>
@@ -860,7 +893,7 @@ export default function HotelsPage({ setPage }: Props) {
                     onChange={(e) =>
                       setHotelForm((f) => ({ ...f, phone: e.target.value }))
                     }
-                    className="bg-white/5 border-white/10"
+                    className="bg-muted/70 border-border"
                   />
                 </div>
               </div>
@@ -870,8 +903,8 @@ export default function HotelsPage({ setPage }: Props) {
                 disabled={loading}
                 className="w-full font-bold"
                 style={{
-                  background: "oklch(0.85 0.13 192)",
-                  color: "oklch(0.13 0.04 195)",
+                  background: "oklch(var(--brand-blue))",
+                  color: "oklch(0.985 0.005 85)",
                 }}
               >
                 {loading ? (
@@ -897,13 +930,13 @@ export default function HotelsPage({ setPage }: Props) {
           data-ocid="hotels.villa.dialog"
           className="sm:max-w-md"
           style={{
-            background: "oklch(0.14 0.025 232)",
-            border: "1px solid oklch(0.3 0.04 232 / 0.5)",
+            background: "oklch(0.99 0.006 248)",
+            border: "1px solid oklch(0.88 0.02 248 / 0.6)",
           }}
         >
           <DialogHeader>
             <DialogTitle className="font-display">
-              <span style={{ color: "oklch(0.85 0.13 192)" }}>
+              <span style={{ color: "oklch(var(--brand-blue))" }}>
                 {villaBooking?.row.name}
               </span>
             </DialogTitle>
@@ -922,7 +955,7 @@ export default function HotelsPage({ setPage }: Props) {
                     onChange={(e) =>
                       setVillaForm((f) => ({ ...f, checkin: e.target.value }))
                     }
-                    className="bg-white/5 border-white/10"
+                    className="bg-muted/70 border-border"
                   />
                 </div>
                 <div>
@@ -936,7 +969,7 @@ export default function HotelsPage({ setPage }: Props) {
                     onChange={(e) =>
                       setVillaForm((f) => ({ ...f, checkout: e.target.value }))
                     }
-                    className="bg-white/5 border-white/10"
+                    className="bg-muted/70 border-border"
                   />
                 </div>
               </div>
@@ -958,7 +991,7 @@ export default function HotelsPage({ setPage }: Props) {
                       ),
                     }))
                   }
-                  className="bg-white/5 border-white/10"
+                  className="bg-muted/70 border-border"
                 />
               </div>
               {belowMin && (
@@ -967,12 +1000,12 @@ export default function HotelsPage({ setPage }: Props) {
                   className="flex items-start gap-2 rounded-xl p-3 text-sm"
                   style={{
                     background: "oklch(0.18 0.06 55 / 0.3)",
-                    border: "1px solid oklch(0.55 0.14 55 / 0.4)",
+                    border: "1px solid oklch(0.55 0.11 36 / 0.4)",
                   }}
                 >
                   <AlertTriangle
                     className="w-4 h-4 mt-0.5 shrink-0"
-                    style={{ color: "oklch(0.75 0.14 55)" }}
+                    style={{ color: "oklch(var(--brand-coral))" }}
                   />
                   <span style={{ color: "oklch(0.8 0.1 55)" }}>
                     {isCheckInWeekend ? "Weekend" : "Weekday"} minimum is{" "}
@@ -984,7 +1017,7 @@ export default function HotelsPage({ setPage }: Props) {
               {villaNights > 0 && (
                 <div
                   className="rounded-xl p-3 text-sm"
-                  style={{ background: "oklch(0.11 0.02 232)" }}
+                  style={{ background: "oklch(0.13 0.036 228)" }}
                 >
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">
@@ -999,7 +1032,7 @@ export default function HotelsPage({ setPage }: Props) {
                     <span className="font-semibold">Total</span>
                     <span
                       className="font-bold"
-                      style={{ color: "oklch(0.85 0.13 192)" }}
+                      style={{ color: "oklch(var(--brand-blue))" }}
                     >
                       ₹{villaTotal.toLocaleString("en-IN")}
                     </span>
@@ -1018,7 +1051,7 @@ export default function HotelsPage({ setPage }: Props) {
                     onChange={(e) =>
                       setVillaForm((f) => ({ ...f, name: e.target.value }))
                     }
-                    className="bg-white/5 border-white/10"
+                    className="bg-muted/70 border-border"
                   />
                 </div>
                 <div>
@@ -1033,7 +1066,7 @@ export default function HotelsPage({ setPage }: Props) {
                     onChange={(e) =>
                       setVillaForm((f) => ({ ...f, email: e.target.value }))
                     }
-                    className="bg-white/5 border-white/10"
+                    className="bg-muted/70 border-border"
                   />
                 </div>
                 <div>
@@ -1047,7 +1080,7 @@ export default function HotelsPage({ setPage }: Props) {
                     onChange={(e) =>
                       setVillaForm((f) => ({ ...f, phone: e.target.value }))
                     }
-                    className="bg-white/5 border-white/10"
+                    className="bg-muted/70 border-border"
                   />
                 </div>
               </div>
@@ -1057,8 +1090,8 @@ export default function HotelsPage({ setPage }: Props) {
                 disabled={loading}
                 className="w-full font-bold"
                 style={{
-                  background: "oklch(0.85 0.13 192)",
-                  color: "oklch(0.13 0.04 195)",
+                  background: "oklch(var(--brand-blue))",
+                  color: "oklch(0.985 0.005 85)",
                 }}
               >
                 {loading ? (
@@ -1075,7 +1108,7 @@ export default function HotelsPage({ setPage }: Props) {
         </DialogContent>
       </Dialog>
 
-      <footer className="text-center py-8 mt-16 text-xs text-muted-foreground border-t border-white/10">
+      <footer className="text-center py-8 mt-16 text-xs text-muted-foreground border-t border-border">
         <Mountain className="w-4 h-4 inline mr-1" />
         Mountain Explorers · © {new Date().getFullYear()} ·
         <a

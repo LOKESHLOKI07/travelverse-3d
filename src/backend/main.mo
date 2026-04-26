@@ -28,6 +28,8 @@ persistent actor {
     maxGroupSize : Nat;
     pricing : PrivatePricing;
     addOns : [AddOnDef];
+    /// Day-by-day narrative for private tours (Day 1, Day 2, …).
+    itineraryDays : [Text];
   };
 
   public type FixedBatch = {
@@ -41,6 +43,7 @@ persistent actor {
     pricePerPersonINR : Nat;
     batches : [FixedBatch];
     addOns : [AddOnDef];
+    inclusions : [Text];
   };
 
   public type PackageDetail = {
@@ -400,6 +403,14 @@ persistent actor {
         maxGroupSize = 20;
         pricing = #multi({ tiers });
         addOns = privateAddOns;
+        itineraryDays = [
+          "Arrive Chandigarh, drive to Manali. Evening walk on Mall Road.";
+          "Cross Rohtang / Atal Tunnel, reach Kaza. Acclimatisation evening.";
+          "Pin Valley monastery visit, village walk, overnight in Kaza.";
+          "Chandratal Lake day excursion; camp or guesthouse.";
+          "Return leg via Kunzum La; night near Manali.";
+          "Departure after breakfast.";
+        ];
       });
     });
 
@@ -415,6 +426,14 @@ persistent actor {
         maxGroupSize = 20;
         pricing = #multi({ tiers });
         addOns = privateAddOns;
+        itineraryDays = [
+          "Fly to Leh, rest and light acclimatisation. Oxygen on standby.";
+          "Sham Valley monasteries: Likir, Alchi, Magnetic Hill.";
+          "Khardung La and Nubra Valley; double-hump camel ride (optional).";
+          "Pangong Tso full day; lakeside stay.";
+          "Return to Leh via Chang La; evening bazaar.";
+          "Leh palace & Shanti Stupa; departure.";
+        ];
       });
     });
 
@@ -439,6 +458,12 @@ persistent actor {
           mkBatch("Jun 1, 2026", 2, 2),
         ];
         addOns = [];
+        inclusions = [
+          "Hotel stay (twin sharing)";
+          "Daily breakfast";
+          "AC vehicle for sightseeing";
+          "English-speaking guide";
+        ];
       });
     });
 
@@ -456,6 +481,12 @@ persistent actor {
           mkBatch("May 20, 2026", 12, 12),
         ];
         addOns = [];
+        inclusions = [
+          "Houseboat stay with meals";
+          "Airport / station transfers";
+          "Shikara ride";
+          "All taxes as per itinerary";
+        ];
       });
     });
 
@@ -474,6 +505,12 @@ persistent actor {
           mkBatch("Jun 10, 2026", 5, 5),
         ];
         addOns = [];
+        inclusions = [
+          "Heritage hotels & haveli stays";
+          "Breakfast daily; select dinners";
+          "Private vehicle with driver";
+          "Monument entry fees (as listed)";
+        ];
       });
     });
   };

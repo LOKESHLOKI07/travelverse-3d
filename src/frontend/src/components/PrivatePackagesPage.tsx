@@ -36,7 +36,7 @@ const TIERS = [
   {
     id: "deluxe",
     label: "Deluxe",
-    color: "oklch(0.75 0.14 55)",
+    color: "oklch(var(--brand-coral))",
     prices: [25000, 22000, 19000, 16000],
   },
   {
@@ -92,7 +92,7 @@ function getPricePerPerson(tierIndex: number, groupSize: number): number {
 
 const TIER_COLOR_CYCLE = [
   "oklch(0.65 0.12 192)",
-  "oklch(0.75 0.14 55)",
+  "oklch(var(--brand-coral))",
   "oklch(0.72 0.18 320)",
 ];
 
@@ -147,6 +147,11 @@ export default function PrivatePackagesPage({ setPage }: Props) {
   const template = catalogMode
     ? (privatePkgs.find((p) => p.name === bookingPkg) ?? privatePkgs[0])
     : null;
+
+  const templateItinerary = useMemo(() => {
+    if (!catalogMode || !template) return [];
+    return (privateCfgOf(template).itineraryDays ?? []).map(String);
+  }, [catalogMode, template]);
 
   const effectiveTiers = useMemo(() => {
     if (!catalogMode || !template) {
@@ -296,14 +301,14 @@ export default function PrivatePackagesPage({ setPage }: Props) {
       className="min-h-screen"
       style={{
         background:
-          "linear-gradient(160deg, oklch(0.13 0.025 232) 0%, oklch(0.09 0.018 232) 100%)",
+          "var(--app-page-gradient)",
       }}
     >
       {/* HEADER */}
       <header
-        className="sticky top-0 z-40 border-b border-white/10"
+        className="sticky top-0 z-40 border-b border-border"
         style={{
-          background: "oklch(0.11 0.025 232 / 0.95)",
+          background: "oklch(0.99 0.006 248 / 0.92)",
           backdropFilter: "blur(20px)",
         }}
       >
@@ -317,10 +322,10 @@ export default function PrivatePackagesPage({ setPage }: Props) {
             <ArrowLeft className="w-4 h-4" />
             <span className="text-sm">Back</span>
           </button>
-          <div className="h-5 w-px bg-white/20" />
+          <div className="h-5 w-px bg-border" />
           <span className="font-display font-bold text-lg tracking-tight">
             Private{" "}
-            <span style={{ color: "oklch(0.85 0.13 192)" }}>Packages</span>
+            <span style={{ color: "oklch(var(--brand-blue))" }}>Packages</span>
           </span>
         </div>
       </header>
@@ -335,14 +340,14 @@ export default function PrivatePackagesPage({ setPage }: Props) {
         >
           <p
             className="text-sm uppercase tracking-widest mb-3"
-            style={{ color: "oklch(0.85 0.13 192)" }}
+            style={{ color: "oklch(var(--brand-blue))" }}
           >
             Tailored for You
           </p>
           <h1 className="font-display text-4xl md:text-6xl font-black text-foreground mb-4">
             Private Travel
             <br />
-            <span style={{ color: "oklch(0.75 0.14 55)" }}>Packages</span>
+            <span style={{ color: "oklch(var(--brand-coral))" }}>Packages</span>
           </h1>
           <p className="text-muted-foreground text-lg max-w-xl">
             Exclusive journeys crafted for your group. Choose your tier,
@@ -358,9 +363,9 @@ export default function PrivatePackagesPage({ setPage }: Props) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="rounded-2xl p-6 border border-white/10"
+              className="rounded-2xl p-6 border border-border"
               style={{
-                background: "oklch(0.16 0.025 232 / 0.6)",
+                background: "oklch(0.98 0.008 248 / 0.72)",
                 backdropFilter: "blur(10px)",
               }}
             >
@@ -379,11 +384,11 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                       borderColor:
                         selectedTier === i
                           ? tier.color
-                          : "oklch(0.3 0.03 232 / 0.5)",
+                          : "oklch(0.88 0.02 248 / 0.6)",
                       background:
                         selectedTier === i
-                          ? "oklch(0.16 0.025 232)"
-                          : "oklch(0.14 0.02 232 / 0.4)",
+                          ? "oklch(0.98 0.009 248)"
+                          : "oklch(0.15 0.038 228 / 0.4)",
                       boxShadow:
                         selectedTier === i
                           ? `0 0 20px ${tier.color}33`
@@ -396,7 +401,7 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                         color:
                           selectedTier === i
                             ? tier.color
-                            : "oklch(0.75 0.02 232)",
+                            : "oklch(0.76 0.03 228)",
                       }}
                     >
                       {tier.label}
@@ -416,9 +421,9 @@ export default function PrivatePackagesPage({ setPage }: Props) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
-              className="rounded-2xl p-6 border border-white/10"
+              className="rounded-2xl p-6 border border-border"
               style={{
-                background: "oklch(0.16 0.025 232 / 0.6)",
+                background: "oklch(0.98 0.008 248 / 0.72)",
                 backdropFilter: "blur(10px)",
               }}
             >
@@ -428,7 +433,7 @@ export default function PrivatePackagesPage({ setPage }: Props) {
               <div className="flex items-center gap-4 mb-4">
                 <Users
                   className="w-5 h-5"
-                  style={{ color: "oklch(0.85 0.13 192)" }}
+                  style={{ color: "oklch(var(--brand-blue))" }}
                 />
                 <span className="text-3xl font-bold">{groupSize}</span>
                 <span className="text-muted-foreground">people</span>
@@ -469,12 +474,12 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                     <div
                       key={label}
                       className="rounded-lg p-3 text-sm"
-                      style={{ background: "oklch(0.13 0.02 232)" }}
+                      style={{ background: "oklch(0.15 0.04 228)" }}
                     >
                       <div className="text-muted-foreground">{label}</div>
                       <div
                         className="font-semibold"
-                        style={{ color: "oklch(0.85 0.13 192)" }}
+                        style={{ color: "oklch(var(--brand-blue))" }}
                       >
                         {price}
                       </div>
@@ -489,9 +494,9 @@ export default function PrivatePackagesPage({ setPage }: Props) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
-              className="rounded-2xl p-6 border border-white/10"
+              className="rounded-2xl p-6 border border-border"
               style={{
-                background: "oklch(0.16 0.025 232 / 0.6)",
+                background: "oklch(0.98 0.008 248 / 0.72)",
                 backdropFilter: "blur(10px)",
               }}
             >
@@ -506,11 +511,11 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                     className="flex items-center gap-3 rounded-xl p-4 cursor-pointer transition-all border"
                     style={{
                       borderColor: selectedAddOns.includes(addOn.id)
-                        ? "oklch(0.85 0.13 192 / 0.5)"
-                        : "oklch(0.25 0.03 232 / 0.5)",
+                        ? "oklch(var(--brand-blue) / 0.5)"
+                        : "oklch(0.26 0.04 228 / 0.5)",
                       background: selectedAddOns.includes(addOn.id)
                         ? "oklch(0.16 0.04 192 / 0.3)"
-                        : "oklch(0.14 0.02 232 / 0.3)",
+                        : "oklch(0.15 0.038 228 / 0.3)",
                     }}
                   >
                     <Checkbox
@@ -523,7 +528,7 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                       <div className="font-medium text-sm">{addOn.label}</div>
                       <div
                         className="text-xs"
-                        style={{ color: "oklch(0.75 0.14 55)" }}
+                        style={{ color: "oklch(var(--brand-coral))" }}
                       >
                         +₹{addOn.price.toLocaleString("en-IN")}/person
                       </div>
@@ -532,6 +537,48 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                 ))}
               </div>
             </motion.div>
+
+            {templateItinerary.length > 0 ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.35 }}
+                className="rounded-2xl p-6 border border-border"
+                style={{
+                  background: "oklch(0.98 0.008 248 / 0.72)",
+                  backdropFilter: "blur(10px)",
+                }}
+              >
+                <h2 className="font-display font-bold text-xl mb-4">
+                  Day-by-day plan
+                </h2>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Sample itinerary for{" "}
+                  <span className="text-foreground font-medium">
+                    {template?.name}
+                  </span>
+                  . Final routing can be tailored to your group.
+                </p>
+                <ol className="space-y-4">
+                  {templateItinerary.map((desc, i) => (
+                    <li
+                      key={`${i}-${desc.slice(0, 24)}`}
+                      className="flex gap-3 text-sm"
+                    >
+                      <span
+                        className="shrink-0 font-bold w-14"
+                        style={{ color: "oklch(var(--brand-blue))" }}
+                      >
+                        Day {i + 1}
+                      </span>
+                      <span className="text-muted-foreground leading-relaxed">
+                        {desc}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </motion.div>
+            ) : null}
 
             {/* Packages */}
             <motion.div
@@ -546,7 +593,7 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                 {displayPackages.map((pkg) => (
                   <div
                     key={pkg.name}
-                    className="rounded-2xl overflow-hidden border border-white/10 group"
+                    className="rounded-2xl overflow-hidden border border-border group"
                   >
                     <div className="relative h-40 overflow-hidden">
                       <img
@@ -558,13 +605,13 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                         className="absolute inset-0"
                         style={{
                           background:
-                            "linear-gradient(to top, oklch(0.13 0.025 232), transparent)",
+                            "linear-gradient(to top, oklch(0.22 0.07 248 / 0.78), transparent)",
                         }}
                       />
                     </div>
                     <div
                       className="p-5"
-                      style={{ background: "oklch(0.16 0.025 232 / 0.8)" }}
+                      style={{ background: "oklch(0.99 0.006 248 / 0.88)" }}
                     >
                       <h3 className="font-display font-bold text-lg mb-1">
                         {pkg.name}
@@ -578,8 +625,8 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                             key={h}
                             className="text-xs px-2 py-1 rounded-full"
                             style={{
-                              background: "oklch(0.2 0.03 232)",
-                              color: "oklch(0.75 0.05 232)",
+                              background: "oklch(0.22 0.04 228)",
+                              color: "oklch(0.74 0.04 228)",
                             }}
                           >
                             {h}
@@ -591,8 +638,8 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                         className="w-full"
                         onClick={() => setBookingPkg(pkg.name)}
                         style={{
-                          background: "oklch(0.85 0.13 192)",
-                          color: "oklch(0.13 0.04 195)",
+                          background: "oklch(var(--brand-blue))",
+                          color: "oklch(0.985 0.005 85)",
                           fontWeight: 700,
                         }}
                       >
@@ -608,9 +655,9 @@ export default function PrivatePackagesPage({ setPage }: Props) {
           {/* RIGHT: Price Summary */}
           <div>
             <div
-              className="sticky top-24 rounded-2xl p-6 border border-white/10"
+              className="sticky top-24 rounded-2xl p-6 border border-border"
               style={{
-                background: "oklch(0.16 0.025 232 / 0.8)",
+                background: "oklch(0.99 0.006 248 / 0.88)",
                 backdropFilter: "blur(10px)",
               }}
             >
@@ -640,12 +687,12 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                     <span className="text-muted-foreground">
                       Add-ons/person
                     </span>
-                    <span style={{ color: "oklch(0.75 0.14 55)" }}>
+                    <span style={{ color: "oklch(var(--brand-coral))" }}>
                       +₹{addOnTotal.toLocaleString("en-IN")}
                     </span>
                   </div>
                 )}
-                <div className="h-px bg-white/10" />
+                <div className="h-px bg-border" />
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Per person</span>
                   <span className="font-semibold">
@@ -655,14 +702,14 @@ export default function PrivatePackagesPage({ setPage }: Props) {
               </div>
               <div
                 className="rounded-xl p-4 mb-6"
-                style={{ background: "oklch(0.13 0.025 232)" }}
+                style={{ background: "oklch(0.99 0.006 248)" }}
               >
                 <div className="text-xs text-muted-foreground mb-1">
                   Grand Total
                 </div>
                 <div
                   className="text-3xl font-black"
-                  style={{ color: "oklch(0.85 0.13 192)" }}
+                  style={{ color: "oklch(var(--brand-blue))" }}
                 >
                   ₹{grandTotal.toLocaleString("en-IN")}
                 </div>
@@ -705,14 +752,14 @@ export default function PrivatePackagesPage({ setPage }: Props) {
           data-ocid="private.booking.dialog"
           className="sm:max-w-md"
           style={{
-            background: "oklch(0.14 0.025 232)",
-            border: "1px solid oklch(0.3 0.04 232 / 0.5)",
+            background: "oklch(0.99 0.006 248)",
+            border: "1px solid oklch(0.88 0.02 248 / 0.6)",
           }}
         >
           <DialogHeader>
             <DialogTitle className="font-display">
               Book:{" "}
-              <span style={{ color: "oklch(0.85 0.13 192)" }}>
+              <span style={{ color: "oklch(var(--brand-blue))" }}>
                 {bookingPkg}
               </span>
             </DialogTitle>
@@ -720,7 +767,7 @@ export default function PrivatePackagesPage({ setPage }: Props) {
           <div className="space-y-4 mt-2">
             <div
               className="rounded-xl p-3 text-sm"
-              style={{ background: "oklch(0.11 0.02 232)" }}
+              style={{ background: "oklch(0.13 0.036 228)" }}
             >
               <div className="flex justify-between">
                 <span className="text-muted-foreground">
@@ -728,7 +775,7 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                 </span>
                 <span
                   className="font-bold"
-                  style={{ color: "oklch(0.85 0.13 192)" }}
+                  style={{ color: "oklch(var(--brand-blue))" }}
                 >
                   ₹{grandTotal.toLocaleString("en-IN")}
                 </span>
@@ -750,7 +797,7 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, name: e.target.value }))
                   }
-                  className="bg-white/5 border-white/10"
+                  className="bg-muted/70 border-border"
                 />
               </div>
               <div>
@@ -769,7 +816,7 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, email: e.target.value }))
                   }
-                  className="bg-white/5 border-white/10"
+                  className="bg-muted/70 border-border"
                 />
               </div>
               <div>
@@ -787,7 +834,7 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, phone: e.target.value }))
                   }
-                  className="bg-white/5 border-white/10"
+                  className="bg-muted/70 border-border"
                 />
               </div>
               <div>
@@ -805,7 +852,7 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, date: e.target.value }))
                   }
-                  className="bg-white/5 border-white/10"
+                  className="bg-muted/70 border-border"
                 />
               </div>
             </div>
@@ -815,8 +862,8 @@ export default function PrivatePackagesPage({ setPage }: Props) {
               disabled={loading}
               className="w-full font-bold"
               style={{
-                background: "oklch(0.85 0.13 192)",
-                color: "oklch(0.13 0.04 195)",
+                background: "oklch(var(--brand-blue))",
+                color: "oklch(0.985 0.005 85)",
               }}
             >
               {loading ? (
@@ -832,7 +879,7 @@ export default function PrivatePackagesPage({ setPage }: Props) {
         </DialogContent>
       </Dialog>
 
-      <footer className="text-center py-8 mt-16 text-xs text-muted-foreground border-t border-white/10">
+      <footer className="text-center py-8 mt-16 text-xs text-muted-foreground border-t border-border">
         <Mountain className="w-4 h-4 inline mr-1" />
         Mountain Explorers · © {new Date().getFullYear()} ·
         <a

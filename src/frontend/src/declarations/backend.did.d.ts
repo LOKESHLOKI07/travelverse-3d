@@ -19,6 +19,7 @@ export type PrivateCfg = {
   maxGroupSize: bigint;
   pricing: PrivatePricing;
   addOns: Array<AddOnDef>;
+  itineraryDays: Array<string>;
 };
 export type FixedBatch = {
   batchId: bigint;
@@ -30,6 +31,7 @@ export type FixedCfg = {
   pricePerPersonINR: bigint;
   batches: Array<FixedBatch>;
   addOns: Array<AddOnDef>;
+  inclusions: Array<string>;
 };
 export type PackageDetail = { private: PrivateCfg } | { fixed: FixedCfg };
 export type TourPackage = {

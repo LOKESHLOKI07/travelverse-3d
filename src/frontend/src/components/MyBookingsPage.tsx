@@ -17,7 +17,7 @@ interface Props {
 }
 
 const STATUS_STYLES: Record<string, { bg: string; color: string }> = {
-  pending: { bg: "oklch(0.55 0.14 55 / 0.2)", color: "oklch(0.75 0.14 55)" },
+  pending: { bg: "oklch(0.55 0.11 36 / 0.2)", color: "oklch(var(--brand-coral))" },
   confirmed: {
     bg: "oklch(0.45 0.18 145 / 0.2)",
     color: "oklch(0.65 0.18 145)",
@@ -50,18 +50,18 @@ export default function MyBookingsPage({ setPage }: Props) {
         className="min-h-screen flex items-center justify-center"
         style={{
           background:
-            "linear-gradient(160deg, oklch(0.13 0.025 232) 0%, oklch(0.09 0.018 232) 100%)",
+            "var(--app-page-gradient)",
         }}
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="text-center p-8 rounded-2xl border border-white/10"
-          style={{ background: "oklch(0.16 0.025 232 / 0.8)" }}
+          className="text-center p-8 rounded-2xl border border-border"
+          style={{ background: "oklch(0.99 0.006 248 / 0.88)" }}
         >
           <Package
             className="w-12 h-12 mx-auto mb-4"
-            style={{ color: "oklch(0.85 0.13 192)" }}
+            style={{ color: "oklch(var(--brand-blue))" }}
           />
           <h2 className="font-display text-2xl font-bold mb-2">
             View Your Bookings
@@ -76,7 +76,7 @@ export default function MyBookingsPage({ setPage }: Props) {
               <Button
                 type="button"
                 variant="outline"
-                className="border-white/20"
+                className="border-border"
                 onClick={() => setPage("account")}
               >
                 Email sign-in
@@ -87,8 +87,8 @@ export default function MyBookingsPage({ setPage }: Props) {
               onClick={() => login()}
               disabled={loginStatus === "logging-in"}
               style={{
-                background: "oklch(0.85 0.13 192)",
-                color: "oklch(0.13 0.04 195)",
+                background: "oklch(var(--brand-blue))",
+                color: "oklch(0.985 0.005 85)",
                 fontWeight: 700,
               }}
             >
@@ -122,13 +122,13 @@ export default function MyBookingsPage({ setPage }: Props) {
       className="min-h-screen"
       style={{
         background:
-          "linear-gradient(160deg, oklch(0.13 0.025 232) 0%, oklch(0.09 0.018 232) 100%)",
+          "var(--app-page-gradient)",
       }}
     >
       <header
-        className="sticky top-0 z-40 border-b border-white/10"
+        className="sticky top-0 z-40 border-b border-border"
         style={{
-          background: "oklch(0.11 0.025 232 / 0.95)",
+          background: "oklch(0.99 0.006 248 / 0.92)",
           backdropFilter: "blur(20px)",
         }}
       >
@@ -142,9 +142,9 @@ export default function MyBookingsPage({ setPage }: Props) {
             <ArrowLeft className="w-4 h-4" />
             <span className="text-sm">Back</span>
           </button>
-          <div className="h-5 w-px bg-white/20" />
+          <div className="h-5 w-px bg-border" />
           <span className="font-display font-bold text-lg tracking-tight">
-            My <span style={{ color: "oklch(0.85 0.13 192)" }}>Bookings</span>
+            My <span style={{ color: "oklch(var(--brand-blue))" }}>Bookings</span>
           </span>
         </div>
       </header>
@@ -157,7 +157,7 @@ export default function MyBookingsPage({ setPage }: Props) {
           className="mb-10"
         >
           <h1 className="font-display text-3xl font-black mb-2">
-            My <span style={{ color: "oklch(0.75 0.14 55)" }}>Bookings</span>
+            My <span style={{ color: "oklch(var(--brand-coral))" }}>Bookings</span>
           </h1>
           <p className="text-muted-foreground">
             Track all your adventure reservations.
@@ -173,8 +173,8 @@ export default function MyBookingsPage({ setPage }: Props) {
         ) : bookings.length === 0 ? (
           <div
             data-ocid="mybookings.empty_state"
-            className="text-center py-24 rounded-2xl border border-white/10"
-            style={{ background: "oklch(0.16 0.025 232 / 0.4)" }}
+            className="text-center py-24 rounded-2xl border border-border"
+            style={{ background: "oklch(0.98 0.008 248 / 0.48)" }}
           >
             <Mountain className="w-12 h-12 mx-auto mb-4 opacity-30" />
             <h3 className="font-display text-xl font-bold mb-2">
@@ -188,8 +188,8 @@ export default function MyBookingsPage({ setPage }: Props) {
               data-ocid="mybookings.explore.primary_button"
               onClick={() => setPage("packages")}
               style={{
-                background: "oklch(0.85 0.13 192)",
-                color: "oklch(0.13 0.04 195)",
+                background: "oklch(var(--brand-blue))",
+                color: "oklch(0.985 0.005 85)",
                 fontWeight: 700,
               }}
             >
@@ -200,8 +200,8 @@ export default function MyBookingsPage({ setPage }: Props) {
           <div className="space-y-4">
             {bookings.map((booking, idx) => {
               const ss = STATUS_STYLES[booking.status] ?? {
-                bg: "oklch(0.2 0.02 232)",
-                color: "oklch(0.6 0.03 232)",
+                bg: "oklch(0.22 0.038 228)",
+                color: "oklch(0.62 0.04 228)",
               };
               return (
                 <motion.div
@@ -210,9 +210,9 @@ export default function MyBookingsPage({ setPage }: Props) {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.08 }}
                   data-ocid={`mybookings.item.${idx + 1}`}
-                  className="rounded-2xl p-6 border border-white/10"
+                  className="rounded-2xl p-6 border border-border"
                   style={{
-                    background: "oklch(0.16 0.025 232 / 0.6)",
+                    background: "oklch(0.98 0.008 248 / 0.72)",
                     backdropFilter: "blur(10px)",
                   }}
                 >
@@ -260,7 +260,7 @@ export default function MyBookingsPage({ setPage }: Props) {
                       </p>
                       <p
                         className="text-sm font-bold"
-                        style={{ color: "oklch(0.85 0.13 192)" }}
+                        style={{ color: "oklch(var(--brand-blue))" }}
                       >
                         ₹{Number(booking.totalPriceINR).toLocaleString("en-IN")}
                       </p>
@@ -275,7 +275,7 @@ export default function MyBookingsPage({ setPage }: Props) {
                     </div>
                   </div>
                   {booking.addOns.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-white/10">
+                    <div className="mt-3 pt-3 border-t border-border">
                       <p className="text-xs text-muted-foreground mb-2">
                         Add-ons:
                       </p>
@@ -285,8 +285,8 @@ export default function MyBookingsPage({ setPage }: Props) {
                             key={a}
                             className="text-xs px-2 py-0.5 rounded-full"
                             style={{
-                              background: "oklch(0.2 0.03 232)",
-                              color: "oklch(0.75 0.05 232)",
+                              background: "oklch(0.22 0.04 228)",
+                              color: "oklch(0.74 0.04 228)",
                             }}
                           >
                             {a}
@@ -302,7 +302,7 @@ export default function MyBookingsPage({ setPage }: Props) {
         )}
       </div>
 
-      <footer className="text-center py-8 mt-16 text-xs text-muted-foreground border-t border-white/10">
+      <footer className="text-center py-8 mt-16 text-xs text-muted-foreground border-t border-border">
         <Mountain className="w-4 h-4 inline mr-1" />
         Mountain Explorers · © {new Date().getFullYear()} ·
         <a

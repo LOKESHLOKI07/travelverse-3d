@@ -75,7 +75,7 @@ export function parseTrekDifficultyColor(longDescription: string | undefined): s
   const m = String(longDescription ?? "").match(
     /difficultyColor:\s*([^\n]+)/i,
   );
-  return (m?.[1] ?? "").trim() || "oklch(0.75 0.14 55)";
+  return (m?.[1] ?? "").trim() || "oklch(var(--brand-coral))";
 }
 
 /** Read `rating:4.8` from hotel `longDescription`. */
@@ -83,4 +83,24 @@ export function parseHotelRating(longDescription: string | undefined): number {
   const m = String(longDescription ?? "").match(/rating:\s*([\d.]+)/i);
   const n = Number(m?.[1]);
   return Number.isFinite(n) ? n : 4.5;
+}
+
+/**
+ * Human-readable stay copy for hotels / villas / farm stays.
+ * Strips machine lines (`rating:…`, `difficultyColor:…`) used elsewhere.
+ */
+export function stayFullDescriptionText(
+  longDescription: string | undefined,
+): string {
+  return String(longDescription ?? "")
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(
+      (l) =>
+        l.length > 0 &&
+        !/^\s*rating:\s*[\d.]+/i.test(l) &&
+        !/^\s*difficultyColor:/i.test(l),
+    )
+    .join("\n\n")
+    .trim();
 }

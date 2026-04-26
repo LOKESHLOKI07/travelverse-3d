@@ -71,18 +71,18 @@ export default {
           ring: "oklch(var(--sidebar-ring))",
         },
         navy: {
-          deep: "oklch(0.11 0.025 232)",
-          surface: "oklch(0.18 0.025 232)",
-          card: "oklch(0.19 0.025 232)",
-          input: "oklch(0.16 0.025 230)",
-          border: "oklch(0.31 0.03 230)",
+          deep: "oklch(0.12 0.038 228)",
+          surface: "oklch(0.20 0.048 228)",
+          card: "oklch(0.21 0.048 228)",
+          input: "oklch(0.17 0.04 228)",
+          border: "oklch(0.30 0.04 228)",
         },
         cyan: {
-          DEFAULT: "oklch(0.85 0.13 192)",
-          bright: "oklch(0.88 0.13 195)",
-          dark: "oklch(0.18 0.04 195)",
+          DEFAULT: "oklch(var(--brand-blue) / <alpha-value>)",
+          bright: "oklch(var(--brand-blue-bright) / <alpha-value>)",
+          dark: "oklch(0.22 0.09 248)",
         },
-        pin: "oklch(0.75 0.14 55)",
+        pin: "oklch(var(--brand-coral) / <alpha-value>)",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -91,8 +91,8 @@ export default {
       },
       boxShadow: {
         xs: "0 1px 2px 0 rgba(0,0,0,0.05)",
-        "glow-cyan": "0 0 20px oklch(0.85 0.13 192 / 0.3), 0 0 60px oklch(0.85 0.13 192 / 0.1)",
-        "glow-card": "0 8px 32px oklch(0 0 0 / 0.5), 0 0 1px oklch(0.85 0.13 192 / 0.15)",
+        "glow-cyan": "0 0 20px oklch(var(--brand-blue) / 0.3), 0 0 60px oklch(var(--brand-blue) / 0.1)",
+        "glow-card": "0 8px 32px oklch(0 0 0 / 0.5), 0 0 1px oklch(var(--brand-blue) / 0.15)",
       },
       keyframes: {
         "accordion-down": {

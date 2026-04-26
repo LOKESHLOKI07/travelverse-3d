@@ -28,6 +28,28 @@ function appAdminTokenForHeaders(): string | undefined {
   return undefined;
 }
 
+/**
+ * Same auth as {@link createNodeHttpBackend} JSON requests. Omit `Content-Type` when the body is `FormData`.
+ */
+export function appendNodeApiAuthHeaders(
+  headers: Headers,
+  getPrincipalText: () => string,
+  getAdminBearer?: () => string | null,
+  getUserBearer?: () => string | null,
+): void {
+  const adminTok = appAdminTokenForHeaders();
+  const adminBearer = getAdminBearer?.()?.trim();
+  const userBearer = getUserBearer?.()?.trim();
+  const bearer = adminBearer || userBearer;
+  if (bearer) {
+    headers.set("Authorization", `Bearer ${bearer}`);
+  }
+  if (adminTok) {
+    headers.set("X-App-Admin-Token", adminTok);
+  }
+  headers.set("X-IC-Principal", getPrincipalText());
+}
+
 function parseBooking(j: Record<string, unknown>): Booking {
   const statusStr = String(j.status);
   const status =

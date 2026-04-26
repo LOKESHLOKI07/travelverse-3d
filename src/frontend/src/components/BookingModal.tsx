@@ -61,8 +61,8 @@ export default function BookingModal({
         data-ocid="booking.dialog"
         className="max-w-lg text-foreground"
         style={{
-          background: "oklch(0.16 0.025 232)",
-          border: "1px solid oklch(0.31 0.03 230 / 0.6)",
+          background: "oklch(0.98 0.009 248)",
+          border: "1px solid oklch(0.88 0.02 248 / 0.55)",
         }}
       >
         <DialogHeader>
@@ -98,13 +98,13 @@ export default function BookingModal({
                 data-ocid="booking.select"
                 className="text-foreground"
                 style={{
-                  background: "oklch(0.14 0.025 232)",
-                  borderColor: "oklch(0.31 0.03 230)",
+                  background: "oklch(0.99 0.006 248)",
+                  borderColor: "oklch(0.88 0.02 248)",
                 }}
               >
                 <SelectValue placeholder="Choose destination" />
               </SelectTrigger>
-              <SelectContent style={{ background: "oklch(0.19 0.025 232)" }}>
+              <SelectContent style={{ background: "oklch(0.21 0.048 228)" }}>
                 {DESTINATIONS.map((d) => (
                   <SelectItem key={d} value={d}>
                     {d}
@@ -132,8 +132,8 @@ export default function BookingModal({
                 }
                 className="text-foreground"
                 style={{
-                  background: "oklch(0.14 0.025 232)",
-                  borderColor: "oklch(0.31 0.03 230)",
+                  background: "oklch(0.99 0.006 248)",
+                  borderColor: "oklch(0.88 0.02 248)",
                   colorScheme: "dark",
                 }}
                 required
@@ -155,8 +155,8 @@ export default function BookingModal({
                 }
                 className="text-foreground"
                 style={{
-                  background: "oklch(0.14 0.025 232)",
-                  borderColor: "oklch(0.31 0.03 230)",
+                  background: "oklch(0.99 0.006 248)",
+                  borderColor: "oklch(0.88 0.02 248)",
                   colorScheme: "dark",
                 }}
                 required
@@ -182,8 +182,8 @@ export default function BookingModal({
               }
               className="text-foreground"
               style={{
-                background: "oklch(0.14 0.025 232)",
-                borderColor: "oklch(0.31 0.03 230)",
+                background: "oklch(0.99 0.006 248)",
+                borderColor: "oklch(0.88 0.02 248)",
               }}
             />
           </div>
@@ -203,8 +203,8 @@ export default function BookingModal({
               onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
               className="text-foreground placeholder:text-muted-foreground"
               style={{
-                background: "oklch(0.14 0.025 232)",
-                borderColor: "oklch(0.31 0.03 230)",
+                background: "oklch(0.99 0.006 248)",
+                borderColor: "oklch(0.88 0.02 248)",
               }}
               required
             />
@@ -227,8 +227,8 @@ export default function BookingModal({
               }
               className="text-foreground placeholder:text-muted-foreground"
               style={{
-                background: "oklch(0.14 0.025 232)",
-                borderColor: "oklch(0.31 0.03 230)",
+                background: "oklch(0.99 0.006 248)",
+                borderColor: "oklch(0.88 0.02 248)",
               }}
               required
             />
@@ -240,8 +240,8 @@ export default function BookingModal({
             disabled={loading}
             className="w-full pill-btn font-bold tracking-widest"
             style={{
-              background: "oklch(0.85 0.13 192)",
-              color: "oklch(0.13 0.04 195)",
+              background: "oklch(var(--brand-blue))",
+              color: "oklch(0.985 0.005 85)",
             }}
           >
             {loading ? "BOOKING..." : "CONFIRM BOOKING"}

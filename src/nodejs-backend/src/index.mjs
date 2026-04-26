@@ -13,6 +13,7 @@ dotenv.config({
 });
 import cors from "cors";
 import express from "express";
+import { attachCatalogMediaRoutes } from "./catalog-media-upload.mjs";
 import { attachCatalogRoutes } from "./catalog-api.mjs";
 import { dbListAllBookings, dbInsertBooking, dbListBookingsByEmail, dbUpdateBookingStatus } from "./db/bookings.mjs";
 import { runMigrations } from "./db/migrate.mjs";
@@ -119,6 +120,14 @@ app.use(express.json());
 app.use((req, res, next) => {
   if (req.path === "/health") return next();
   if (req.method === "OPTIONS") return next();
+  // <img src=".../catalog-media/..."> cannot send X-IC-Principal; uploads stay POST + admin-only.
+  if (
+    (req.method === "GET" || req.method === "HEAD") &&
+    req.path.startsWith("/catalog-media/")
+  ) {
+    req.callerPrincipal = ANONYMOUS_TEXT;
+    return next();
+  }
   if (req.method === "GET" && req.path === "/favicon.ico") {
     res.status(204).end();
     return;
@@ -640,6 +649,21 @@ async function bootstrap() {
     }
   });
 
+  const catalogUploadDir = join(
+    dirname(fileURLToPath(import.meta.url)),
+    "..",
+    "data",
+    "catalog-uploads",
+  );
+  const catalogMediaUrlPrefix =
+    process.env.CATALOG_MEDIA_URL_PREFIX?.trim() || "/api-node/catalog-media";
+
+  attachCatalogMediaRoutes(app, {
+    uploadDir: catalogUploadDir,
+    isAdminRequest,
+    urlPrefix: catalogMediaUrlPrefix,
+  });
+
   attachCatalogRoutes(app, {
     catalog,
     isAdminRequest,
@@ -648,8 +672,25 @@ async function bootstrap() {
 
   app.use((err, req, res, _next) => {
     if (res.headersSent) return;
+    if (err && err.name === "MulterError") {
+      const code = err.code;
+      const msg =
+        code === "LIMIT_FILE_SIZE"
+          ? "Image too large (max 8 MB)"
+          : String(err.message || "Upload failed");
+      res.status(400).json({ error: msg });
+      return;
+    }
     if (err && err.status === 400 && err.type === "entity.parse.failed") {
       res.status(400).json({ error: "Invalid JSON body" });
+      return;
+    }
+    if (
+      err &&
+      typeof err.message === "string" &&
+      err.message.includes("Only JPEG, PNG, WebP, or GIF")
+    ) {
+      res.status(400).json({ error: err.message });
       return;
     }
     console.error("[tourist-node-api] Unhandled error:", err);

@@ -19,6 +19,8 @@ export default defineConfig({
     postcss: "./postcss.config.js",
   },
   optimizeDeps: {
+    // Stabilize Radix pre-bundling (avoids flaky "504 Outdated Optimize Dep" after dep edits).
+    include: ["@radix-ui/react-dropdown-menu"],
     esbuildOptions: {
       define: {
         global: "globalThis",
@@ -64,6 +66,7 @@ export default defineConfig({
       VITE_USE_NODE_BACKEND: null,
       VITE_NODE_API_BASE_URL: null,
       VITE_APP_ADMIN_TOKEN: null,
+      VITE_DEBUG_CATALOG_MEDIA: null,
     }),
     react(),
   ],

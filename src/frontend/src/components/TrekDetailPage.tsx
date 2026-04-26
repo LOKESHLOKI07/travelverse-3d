@@ -186,10 +186,10 @@ export default function TrekDetailPage({
           variant="outline"
           className="rounded-full gap-2 text-sm"
           style={{
-            background: "oklch(0.13 0.025 232 / 0.9)",
+            background: "oklch(0.99 0.006 248 / 0.94)",
             backdropFilter: "blur(10px)",
-            borderColor: "oklch(0.31 0.03 230 / 0.6)",
-            color: "oklch(0.85 0.13 192)",
+            borderColor: "oklch(0.88 0.02 248 / 0.55)",
+            color: "oklch(var(--brand-blue))",
           }}
         >
           <ArrowLeft className="w-4 h-4" />
@@ -208,7 +208,7 @@ export default function TrekDetailPage({
           className="absolute inset-0"
           style={{
             background:
-              "linear-gradient(to bottom, oklch(0.05 0.015 232 / 0.5) 0%, oklch(0.09 0.02 232 / 0.9) 100%)",
+              "linear-gradient(to bottom, oklch(0.06 0.02 228 / 0.5) 0%, oklch(0.10 0.032 228 / 0.9) 100%)",
           }}
         />
 
@@ -232,9 +232,9 @@ export default function TrekDetailPage({
             <div
               className="inline-flex flex-wrap items-center gap-4 px-6 py-3 rounded-2xl text-sm"
               style={{
-                background: "oklch(0.13 0.025 232 / 0.8)",
+                background: "oklch(0.99 0.006 248 / 0.9)",
                 backdropFilter: "blur(16px)",
-                border: "1px solid oklch(0.31 0.03 230 / 0.5)",
+                border: "1px solid oklch(0.88 0.02 248 / 0.6)",
               }}
             >
               <span className="flex items-center gap-1.5 text-foreground">
@@ -261,9 +261,9 @@ export default function TrekDetailPage({
               onClick={() => openBooking("Friendship Peak")}
               className="pill-btn font-bold tracking-wider text-base px-10 py-3"
               style={{
-                background: "oklch(0.85 0.13 192)",
-                color: "oklch(0.13 0.04 195)",
-                boxShadow: "0 0 30px oklch(0.85 0.13 192 / 0.4)",
+                background: "oklch(var(--brand-blue))",
+                color: "oklch(0.985 0.005 85)",
+                boxShadow: "0 0 30px oklch(var(--brand-blue) / 0.4)",
               }}
             >
               Book Now — ₹28,500
@@ -285,7 +285,7 @@ export default function TrekDetailPage({
               <div
                 className="glass-card rounded-2xl p-6 overflow-x-auto"
                 style={{
-                  boxShadow: "0 0 40px oklch(0.85 0.13 192 / 0.05)",
+                  boxShadow: "0 0 40px oklch(var(--brand-blue) / 0.05)",
                 }}
               >
                 <svg
@@ -299,12 +299,12 @@ export default function TrekDetailPage({
                     <linearGradient id="routeGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop
                         offset="0%"
-                        stopColor="oklch(0.85 0.13 192)"
+                        stopColor="oklch(var(--brand-blue))"
                         stopOpacity="0.12"
                       />
                       <stop
                         offset="100%"
-                        stopColor="oklch(0.85 0.13 192)"
+                        stopColor="oklch(var(--brand-blue))"
                         stopOpacity="0"
                       />
                     </linearGradient>
@@ -319,7 +319,7 @@ export default function TrekDetailPage({
                     ref={routeRef}
                     d="M 40 280 Q 90 260 140 240 Q 180 225 220 200 Q 260 175 290 150 Q 320 125 360 100 Q 400 75 440 50"
                     fill="none"
-                    stroke="oklch(0.85 0.13 192)"
+                    stroke="oklch(var(--brand-blue))"
                     strokeWidth="2"
                     strokeLinecap="round"
                     className={routeVisible ? "animate-path" : ""}
@@ -334,8 +334,8 @@ export default function TrekDetailPage({
                         r="12"
                         fill={
                           pt.summit
-                            ? "oklch(0.75 0.14 55 / 0.15)"
-                            : "oklch(0.85 0.13 192 / 0.1)"
+                            ? "oklch(var(--brand-coral) / 0.15)"
+                            : "oklch(var(--brand-blue) / 0.1)"
                         }
                       />
                       <circle
@@ -344,20 +344,20 @@ export default function TrekDetailPage({
                         r="6"
                         fill={
                           pt.summit
-                            ? "oklch(0.75 0.14 55)"
-                            : "oklch(0.16 0.025 232)"
+                            ? "oklch(var(--brand-coral))"
+                            : "oklch(0.98 0.009 248)"
                         }
                         stroke={
                           pt.summit
-                            ? "oklch(0.75 0.14 55)"
-                            : "oklch(0.85 0.13 192)"
+                            ? "oklch(var(--brand-coral))"
+                            : "oklch(var(--brand-blue))"
                         }
                         strokeWidth="1.5"
                       />
                       <text
                         x={pt.x + 14}
                         y={pt.y - 6}
-                        fill="oklch(0.85 0.13 192)"
+                        fill="oklch(var(--brand-blue))"
                         fontSize="9"
                         fontWeight="700"
                         fontFamily="Bricolage Grotesque, sans-serif"
@@ -378,7 +378,7 @@ export default function TrekDetailPage({
                         y={pt.y + 19}
                         fill={
                           pt.summit
-                            ? "oklch(0.75 0.14 55)"
+                            ? "oklch(var(--brand-coral))"
                             : "oklch(0.6 0.03 220)"
                         }
                         fontSize="8"
@@ -413,16 +413,16 @@ export default function TrekDetailPage({
                       style={{
                         background:
                           item.day === 8
-                            ? "oklch(0.75 0.14 55 / 0.15)"
-                            : "oklch(0.85 0.13 192 / 0.1)",
+                            ? "oklch(var(--brand-coral) / 0.15)"
+                            : "oklch(var(--brand-blue) / 0.1)",
                         border:
                           item.day === 8
-                            ? "1px solid oklch(0.75 0.14 55 / 0.4)"
-                            : "1px solid oklch(0.85 0.13 192 / 0.4)",
+                            ? "1px solid oklch(var(--brand-coral) / 0.4)"
+                            : "1px solid oklch(var(--brand-blue) / 0.4)",
                         color:
                           item.day === 8
-                            ? "oklch(0.75 0.14 55)"
-                            : "oklch(0.85 0.13 192)",
+                            ? "oklch(var(--brand-coral))"
+                            : "oklch(var(--brand-blue))",
                       }}
                     >
                       {item.day}
@@ -473,7 +473,7 @@ export default function TrekDetailPage({
                       className="absolute bottom-0 left-0 right-0 p-3"
                       style={{
                         background:
-                          "linear-gradient(to top, oklch(0.09 0.018 232 / 0.9), transparent)",
+                          "linear-gradient(to top, oklch(0.22 0.07 248 / 0.82), transparent)",
                       }}
                     >
                       <p className="text-xs font-semibold text-foreground">
@@ -540,14 +540,14 @@ export default function TrekDetailPage({
                   </div>
                   <div
                     className="h-3 rounded-full overflow-hidden"
-                    style={{ background: "oklch(0.22 0.025 230)" }}
+                    style={{ background: "oklch(0.965 0.012 248)" }}
                   >
                     <div
                       className="h-full rounded-full"
                       style={{
                         width: "70%",
                         background:
-                          "linear-gradient(to right, oklch(0.85 0.13 192), oklch(0.75 0.14 55))",
+                          "linear-gradient(to right, oklch(var(--brand-blue)), oklch(var(--brand-coral)))",
                       }}
                     />
                   </div>
@@ -618,7 +618,7 @@ export default function TrekDetailPage({
                 className="glass-card rounded-2xl p-6"
                 style={{
                   boxShadow:
-                    "0 0 40px oklch(0.85 0.13 192 / 0.1), 0 0 0 1px oklch(0.85 0.13 192 / 0.15)",
+                    "0 0 40px oklch(var(--brand-blue) / 0.1), 0 0 0 1px oklch(var(--brand-blue) / 0.15)",
                 }}
               >
                 <div className="flex items-center justify-between mb-4">
@@ -647,8 +647,8 @@ export default function TrekDetailPage({
                   onClick={() => openBooking("Friendship Peak")}
                   className="w-full pill-btn font-bold"
                   style={{
-                    background: "oklch(0.85 0.13 192)",
-                    color: "oklch(0.13 0.04 195)",
+                    background: "oklch(var(--brand-blue))",
+                    color: "oklch(0.985 0.005 85)",
                   }}
                 >
                   Book Now
@@ -663,7 +663,7 @@ export default function TrekDetailPage({
               className="sticky top-24 glass-card rounded-2xl p-6 space-y-5"
               style={{
                 boxShadow:
-                  "0 0 60px oklch(0.85 0.13 192 / 0.12), 0 0 0 1px oklch(0.85 0.13 192 / 0.2)",
+                  "0 0 60px oklch(var(--brand-blue) / 0.12), 0 0 0 1px oklch(var(--brand-blue) / 0.2)",
               }}
             >
               <div>
@@ -706,8 +706,8 @@ export default function TrekDetailPage({
                     onChange={(e) => setBookingDate(e.target.value)}
                     className="w-full rounded-lg px-3 py-2 text-sm text-foreground"
                     style={{
-                      background: "oklch(0.14 0.025 232)",
-                      border: "1px solid oklch(0.31 0.03 230)",
+                      background: "oklch(0.99 0.006 248)",
+                      border: "1px solid oklch(0.88 0.02 248)",
                       colorScheme: "dark",
                     }}
                   />
@@ -727,8 +727,8 @@ export default function TrekDetailPage({
                     onChange={(e) => setGuests(e.target.value)}
                     className="w-full rounded-lg px-3 py-2 text-sm text-foreground"
                     style={{
-                      background: "oklch(0.14 0.025 232)",
-                      border: "1px solid oklch(0.31 0.03 230)",
+                      background: "oklch(0.99 0.006 248)",
+                      border: "1px solid oklch(0.88 0.02 248)",
                     }}
                   >
                     {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
@@ -743,8 +743,8 @@ export default function TrekDetailPage({
               <div
                 className="pt-2 pb-2"
                 style={{
-                  borderTop: "1px solid oklch(0.31 0.03 230 / 0.4)",
-                  borderBottom: "1px solid oklch(0.31 0.03 230 / 0.4)",
+                  borderTop: "1px solid oklch(0.88 0.02 248 / 0.45)",
+                  borderBottom: "1px solid oklch(0.88 0.02 248 / 0.45)",
                 }}
               >
                 <div className="flex justify-between text-sm">
@@ -762,9 +762,9 @@ export default function TrekDetailPage({
                 onClick={() => openBooking("Friendship Peak")}
                 className="w-full pill-btn font-bold tracking-wider"
                 style={{
-                  background: "oklch(0.85 0.13 192)",
-                  color: "oklch(0.13 0.04 195)",
-                  boxShadow: "0 0 30px oklch(0.85 0.13 192 / 0.35)",
+                  background: "oklch(var(--brand-blue))",
+                  color: "oklch(0.985 0.005 85)",
+                  boxShadow: "0 0 30px oklch(var(--brand-blue) / 0.35)",
                 }}
               >
                 Book Now
@@ -776,7 +776,7 @@ export default function TrekDetailPage({
 
               <div
                 className="flex items-center gap-2 p-3 rounded-xl text-xs text-muted-foreground"
-                style={{ background: "oklch(0.16 0.025 232)" }}
+                style={{ background: "oklch(0.98 0.009 248)" }}
               >
                 <span className="text-cyan">ℹ️</span>
                 Next available date: April 15, 2026 • Limited to 8 trekkers
@@ -789,7 +789,7 @@ export default function TrekDetailPage({
       {/* FOOTER */}
       <footer
         className="py-8 mt-16"
-        style={{ borderTop: "1px solid oklch(0.31 0.03 230 / 0.4)" }}
+        style={{ borderTop: "1px solid oklch(0.88 0.02 248 / 0.45)" }}
       >
         <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">

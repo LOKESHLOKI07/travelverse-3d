@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { motion } from "motion/react";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
+import type { PackageSearchFilters } from "../types";
 
 /** Repo snow JPGs under /assets are often missing or UTF-8–corrupted; use procedural snow instead. */
 function makeSnowCanvasTexture(seed: number): THREE.CanvasTexture {
@@ -83,11 +84,10 @@ function SnowTerrain({ texture }: { texture: THREE.CanvasTexture }) {
   );
 }
 
-function SnowParticles() {
+function SnowParticles({ count = 800 }: { count?: number }) {
   const pointsRef = useRef<THREE.Points>(null);
 
   const [positions, velocities] = useMemo(() => {
-    const count = 800;
     const pos = new Float32Array(count * 3);
     const vel = new Float32Array(count);
     for (let i = 0; i < count; i++) {
@@ -140,9 +140,11 @@ function CameraSetup() {
 function SceneContent({
   texture,
   enableManualRotate,
+  particleCount,
 }: {
   texture: THREE.CanvasTexture;
   enableManualRotate: boolean;
+  particleCount: number;
 }) {
   return (
     <>
@@ -161,10 +163,10 @@ function SceneContent({
         <SnowTerrain texture={texture} />
       </Suspense>
 
-      <SnowParticles />
+      <SnowParticles count={particleCount} />
 
       <OrbitControls
-        autoRotate
+        autoRotate={enableManualRotate}
         autoRotateSpeed={0.3}
         enableZoom={false}
         enablePan={false}
@@ -176,7 +178,7 @@ function SceneContent({
 }
 
 interface SnowTerrain3DProps {
-  openBooking: (dest?: string) => void;
+  openBooking: (filters?: PackageSearchFilters) => void;
   scrollToSection: (id: string) => void;
 }
 
@@ -184,7 +186,7 @@ export default function SnowTerrain3D({
   openBooking,
   scrollToSection,
 }: SnowTerrain3DProps) {
-  const [activeTexture, setActiveTexture] = useState(0);
+  const activeTexture = 0;
   const heroScrollFriendly = useHeroScrollFriendlyLayout();
 
   const snowTextures = useMemo(() => {
@@ -206,38 +208,61 @@ export default function SnowTerrain3D({
       id="hero"
       className="relative overflow-hidden"
       style={{
-        height: "100vh",
+        height: heroScrollFriendly ? "88vh" : "100vh",
         minHeight: "500px",
         background: "#050a18",
+        touchAction: heroScrollFriendly ? "pan-y" : "auto",
       }}
     >
-      {/* 3D Canvas — ≤1024px: pan-y + no drag-orbit so the page scrolls; autoRotate still runs */}
-      <div
-        className="absolute inset-0"
-        style={heroScrollFriendly ? { touchAction: "pan-y" } : undefined}
-      >
-        <Canvas
-          camera={{ position: [0, 8, 18], fov: 55 }}
-          style={{ background: "#050a18" }}
-          gl={{ antialias: true }}
-        >
-          <SceneContent
-            texture={activeSnow}
-            enableManualRotate={!heroScrollFriendly}
-          />
-        </Canvas>
-      </div>
+      {/* Desktop: 3D Canvas / Mobile: static hero image for smooth scrolling */}
+      {heroScrollFriendly ? (
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              "url('/assets/generated/hero-mountains.dim_1920x1080.jpg')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            pointerEvents: "none",
+          }}
+        />
+      ) : (
+        <div className="absolute inset-0">
+          <Canvas
+            camera={{ position: [0, 8, 18], fov: 55 }}
+            style={{ background: "#050a18" }}
+            gl={{ antialias: true }}
+          >
+            <SceneContent
+              texture={activeSnow}
+              enableManualRotate
+              particleCount={800}
+            />
+          </Canvas>
+        </div>
+      )}
 
       {/* Dark gradient overlay at bottom */}
       <div
         className="absolute bottom-0 left-0 right-0 z-10"
         style={{
-          height: "50%",
+          height: heroScrollFriendly ? "62%" : "50%",
           background:
             "linear-gradient(to top, #050a18 0%, #050a18aa 40%, transparent 100%)",
           pointerEvents: "none",
         }}
       />
+
+      {heroScrollFriendly && (
+        <div
+          className="absolute inset-0 z-10"
+          style={{
+            background:
+              "linear-gradient(to bottom, rgba(5,10,24,0.42) 0%, rgba(5,10,24,0.18) 34%, rgba(5,10,24,0.62) 100%)",
+            pointerEvents: "none",
+          }}
+        />
+      )}
 
       {/* Top navbar gradient */}
       <div
@@ -251,7 +276,10 @@ export default function SnowTerrain3D({
       />
 
       {/* Text overlay */}
-      <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-6 pointer-events-none">
+      <div
+        className="absolute inset-0 z-20 flex flex-col items-center justify-start sm:justify-center text-center px-6 pt-44 sm:pt-0"
+        style={{ pointerEvents: heroScrollFriendly ? "none" : "auto" }}
+      >
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
@@ -261,14 +289,25 @@ export default function SnowTerrain3D({
           <div
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold pointer-events-auto"
             style={{
-              background: "oklch(0.85 0.13 192 / 0.12)",
-              border: "1px solid oklch(0.85 0.13 192 / 0.35)",
-              color: "oklch(0.85 0.13 192)",
+              background: heroScrollFriendly
+                ? "rgba(0, 24, 48, 0.45)"
+                : "oklch(var(--brand-blue) / 0.12)",
+              border: heroScrollFriendly
+                ? "1px solid rgba(255,255,255,0.35)"
+                : "1px solid oklch(var(--brand-blue) / 0.35)",
+              color: heroScrollFriendly
+                ? "rgba(245,250,255,0.98)"
+                : "oklch(var(--brand-blue))",
+              textShadow: heroScrollFriendly ? "0 1px 8px rgba(0,0,0,0.55)" : "none",
             }}
           >
             <span
               className="w-2 h-2 rounded-full animate-pulse"
-              style={{ background: "oklch(0.85 0.13 192)" }}
+              style={{
+                background: heroScrollFriendly
+                  ? "rgba(235, 245, 255, 0.95)"
+                  : "oklch(var(--brand-blue))",
+              }}
             />
             🏔 Premium Himalayan Expeditions
           </div>
@@ -276,7 +315,7 @@ export default function SnowTerrain3D({
           <h1
             className="font-display font-extrabold leading-[0.9] text-white"
             style={{
-              fontSize: "clamp(48px, 7vw, 96px)",
+              fontSize: "clamp(36px, 7vw, 96px)",
               textShadow: "0 2px 40px rgba(0,0,0,0.8)",
             }}
           >
@@ -284,8 +323,12 @@ export default function SnowTerrain3D({
             <br />
             <span
               style={{
-                color: "oklch(0.85 0.13 192)",
-                textShadow: "0 0 40px oklch(0.85 0.13 192 / 0.6)",
+                color: heroScrollFriendly
+                  ? "rgba(125, 211, 252, 0.98)"
+                  : "oklch(var(--brand-blue))",
+                textShadow: heroScrollFriendly
+                  ? "0 0 24px rgba(10, 140, 255, 0.55)"
+                  : "0 0 40px oklch(var(--brand-blue) / 0.6)",
               }}
             >
               HIMALAYAS
@@ -306,13 +349,13 @@ export default function SnowTerrain3D({
             <button
               type="button"
               data-ocid="hero.primary_button"
-              onClick={() => openBooking("Friendship Peak")}
+              onClick={() => openBooking({ destination: "Friendship Peak", date: "", guests: 1 })}
               className="rounded-full font-bold tracking-wider text-base px-8 py-3 transition-all hover:scale-105"
               style={{
-                background: "oklch(0.85 0.13 192)",
-                color: "oklch(0.13 0.04 195)",
+                background: "oklch(var(--brand-blue))",
+                color: "oklch(0.985 0.005 85)",
                 boxShadow:
-                  "0 0 30px oklch(0.85 0.13 192 / 0.5), 0 0 80px oklch(0.85 0.13 192 / 0.2)",
+                  "0 0 30px oklch(var(--brand-blue) / 0.5), 0 0 80px oklch(var(--brand-blue) / 0.2)",
                 border: "none",
               }}
             >
@@ -324,10 +367,10 @@ export default function SnowTerrain3D({
               onClick={() => scrollToSection("treks")}
               className="rounded-full text-base px-8 py-3 transition-all hover:scale-105"
               style={{
-                borderColor: "oklch(0.85 0.13 192 / 0.6)",
-                color: "oklch(0.85 0.13 192)",
+                borderColor: "oklch(var(--brand-blue) / 0.6)",
+                color: "oklch(var(--brand-blue))",
                 background: "transparent",
-                border: "1px solid oklch(0.85 0.13 192 / 0.6)",
+                border: "1px solid oklch(var(--brand-blue) / 0.6)",
               }}
             >
               Explore Treks
@@ -340,13 +383,13 @@ export default function SnowTerrain3D({
                 {i > 0 && (
                   <div
                     className="w-px h-8"
-                    style={{ background: "oklch(0.31 0.03 230)" }}
+                    style={{ background: "oklch(0.30 0.04 228)" }}
                   />
                 )}
                 <div className="text-center">
                   <div
                     className="font-display font-bold text-xl"
-                    style={{ color: "oklch(0.85 0.13 192)" }}
+                    style={{ color: "oklch(var(--brand-blue))" }}
                   >
                     {val}
                   </div>
@@ -358,54 +401,6 @@ export default function SnowTerrain3D({
         </motion.div>
       </div>
 
-      {/* Texture Switcher */}
-      <div
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3"
-        style={{ pointerEvents: "auto" }}
-      >
-        <span className="text-white/40 text-xs font-medium tracking-widest uppercase mr-1">
-          Surface
-        </span>
-        {SNOW_TEXTURE_SEEDS.map((seed, i) => (
-          <button
-            key={seed}
-            type="button"
-            data-ocid={`hero.toggle.${i + 1}`}
-            onClick={() => setActiveTexture(i)}
-            className="relative overflow-hidden rounded-lg transition-all hover:scale-110"
-            style={{
-              width: "44px",
-              height: "44px",
-              border:
-                activeTexture === i
-                  ? "2px solid oklch(0.85 0.13 192)"
-                  : "2px solid rgba(255,255,255,0.2)",
-              boxShadow:
-                activeTexture === i
-                  ? "0 0 12px oklch(0.85 0.13 192 / 0.6)"
-                  : "none",
-              background: "#0a0f1e",
-            }}
-            title={`Snow surface ${i + 1}`}
-          >
-            <span
-              className="block w-full h-full"
-              style={{
-                background:
-                  "linear-gradient(135deg, oklch(0.95 0.02 240), oklch(0.82 0.04 230))",
-                opacity: 0.85,
-              }}
-              aria-hidden
-            />
-            {activeTexture === i && (
-              <div
-                className="absolute inset-0 rounded-md"
-                style={{ background: "oklch(0.85 0.13 192 / 0.15)" }}
-              />
-            )}
-          </button>
-        ))}
-      </div>
     </section>
   );
 }
