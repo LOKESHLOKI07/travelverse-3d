@@ -1231,24 +1231,15 @@ export default function AdminCatalogPanel() {
               Active
             </Label>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <div className="flex gap-2">
-              <Button type="button" onClick={() => void saveCategory()}>
-                {catId ? "Update category" : "Add category"}
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" onClick={() => void saveCategory()}>
+              {catId ? "Update category" : "Add category"}
+            </Button>
+            {catId ? (
+              <Button type="button" variant="ghost" onClick={resetCatForm}>
+                Cancel
               </Button>
-              {catId ? (
-                <Button type="button" variant="ghost" onClick={resetCatForm}>
-                  Cancel
-                </Button>
-              ) : null}
-            </div>
-            <p className="text-[11px] text-muted-foreground max-w-md leading-snug">
-              Saving categories and packages calls the catalog API as admin. Node
-              dev: run <code className="text-foreground/70">pnpm dev:api</code>,
-              use <code className="text-foreground/70">/admin</code> (admin /
-              admin) so your session matches{" "}
-              <code className="text-foreground/70">VITE_APP_ADMIN_TOKEN</code>.
-            </p>
+            ) : null}
           </div>
         </div>
       </section>

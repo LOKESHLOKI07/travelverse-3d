@@ -761,7 +761,7 @@ export default function AdminPage({ setPage }: Props) {
               value="catalog"
               className="w-full px-3 py-2 text-sm sm:text-base"
             >
-              {"Packages & catalog"}
+              Catalog
             </TabsTrigger>
           </TabsList>
 
@@ -941,12 +941,7 @@ export default function AdminPage({ setPage }: Props) {
                               >
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent
-                                style={{
-                                  background: "oklch(0.20 0.048 228)",
-                                  border: "1px solid oklch(0.88 0.02 248 / 0.6)",
-                                }}
-                              >
+                              <SelectContent className="border-border bg-popover text-popover-foreground">
                                 <SelectItem value="pending">Pending</SelectItem>
                                 <SelectItem value="confirmed">
                                   Confirmed

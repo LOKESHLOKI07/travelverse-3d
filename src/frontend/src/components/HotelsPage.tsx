@@ -1206,18 +1206,9 @@ export default function HotelsPage({
                 hotelForm.checkout,
                 hotelBooking.hotel.bookingBlackoutDates,
               ) ? (
-                <div
-                  className="flex items-start gap-2 rounded-xl p-3 text-sm"
-                  style={{
-                    background: "oklch(0.18 0.06 55 / 0.3)",
-                    border: "1px solid oklch(0.55 0.11 36 / 0.4)",
-                  }}
-                >
-                  <AlertTriangle
-                    className="w-4 h-4 mt-0.5 shrink-0"
-                    style={{ color: "oklch(var(--brand-coral))" }}
-                  />
-                  <span style={{ color: "oklch(0.8 0.1 55)" }}>
+                <div className="flex items-start gap-2 rounded-xl border border-amber-300/90 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-600/50 dark:bg-amber-950/40 dark:text-amber-50">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-300" />
+                  <span>
                     Selected nights include a blackout for this property.
                   </span>
                 </div>
@@ -1344,7 +1335,9 @@ export default function HotelsPage({
                       setVillaMealIncluded(Boolean(c))
                     }
                   />
-                  <span>Include meals (published villa meal rates)</span>
+                  <span title="Uses published villa meal vs no-meal rates when set on the package">
+                    Include meals
+                  </span>
                 </label>
               ) : null}
               {villaForm.checkin &&
@@ -1354,18 +1347,9 @@ export default function HotelsPage({
                 villaForm.checkout,
                 villaBooking.row.bookingBlackoutDates,
               ) ? (
-                <div
-                  className="flex items-start gap-2 rounded-xl p-3 text-sm"
-                  style={{
-                    background: "oklch(0.18 0.06 55 / 0.3)",
-                    border: "1px solid oklch(0.55 0.11 36 / 0.4)",
-                  }}
-                >
-                  <AlertTriangle
-                    className="w-4 h-4 mt-0.5 shrink-0"
-                    style={{ color: "oklch(var(--brand-coral))" }}
-                  />
-                  <span style={{ color: "oklch(0.8 0.1 55)" }}>
+                <div className="flex items-start gap-2 rounded-xl border border-amber-300/90 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-600/50 dark:bg-amber-950/40 dark:text-amber-50">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-300" />
+                  <span>
                     Selected nights include a blackout for this stay.
                   </span>
                 </div>
@@ -1373,20 +1357,13 @@ export default function HotelsPage({
               {belowMin ? (
                 <div
                   data-ocid="hotels.villa.error_state"
-                  className="flex items-start gap-2 rounded-xl p-3 text-sm"
-                  style={{
-                    background: "oklch(0.18 0.06 55 / 0.3)",
-                    border: "1px solid oklch(0.55 0.11 36 / 0.4)",
-                  }}
+                  className="flex items-start gap-2 rounded-xl border border-amber-300/90 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-600/50 dark:bg-amber-950/40 dark:text-amber-50"
                 >
-                  <AlertTriangle
-                    className="w-4 h-4 mt-0.5 shrink-0"
-                    style={{ color: "oklch(var(--brand-coral))" }}
-                  />
-                  <span style={{ color: "oklch(0.8 0.1 55)" }}>
-                    {isCheckInWeekend ? "Weekend" : "Weekday"} minimum is{" "}
-                    {minPersons} people. You can still book, but please confirm
-                    with our team.
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-300" />
+                  <span>
+                    {isCheckInWeekend ? "Weekend" : "Weekday"} stays at this
+                    property usually need at least {minPersons} guests. You can
+                    still submit — we will confirm availability.
                   </span>
                 </div>
               ) : null}
