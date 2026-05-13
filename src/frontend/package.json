@@ -8,9 +8,9 @@
     "dev": "vite",
     "dev:force": "vite --force",
     "postbuild": "node ../../scripts/sync-frontend-public-assets.js",
-    "build:skip-bindings": "vite build && pnpm copy:env",
-    "build": "vite build && pnpm copy:env",
-    "copy:env": "cp env.json dist/",
+    "build:skip-bindings": "vite build && pnpm run copy:env",
+    "build": "vite build && pnpm run copy:env",
+    "copy:env": "node -e \"require('node:fs').copyFileSync('env.json','dist/env.json')\"",
     "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsconfig.tsbuildinfo --pretty",
     "check": "biome check src",
     "fix": "biome check --write src"
