@@ -1,19 +1,12 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import CatalogBookingCheckoutDialog from "@/components/CatalogBookingCheckoutDialog";
 import { FixedBatchSeatBadge } from "@/components/FixedBatchSeatBadge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useActor } from "@/hooks/useActor";
 import {
   ArrowLeft,
   Calendar,
-  Loader2,
+  MapPin,
   Mountain,
   TrendingUp,
   Users,
@@ -51,6 +44,10 @@ interface Trek {
   difficultyColor: string;
   batches: Batch[];
   inclusions: string[];
+  exclusions: string[];
+  meetingLabel: string;
+  meetingMapsUrl: string;
+  propertyYoutubeUrl: string;
   packageId?: bigint;
 }
 
@@ -70,6 +67,10 @@ const TREKS: Trek[] = [
       "All meals on trek",
       "Permits & forest fees",
     ],
+    exclusions: [],
+    meetingLabel: "",
+    meetingMapsUrl: "",
+    propertyYoutubeUrl: "",
     batches: [
       { date: "May 1, 2026", seats: 8, seatsTotal: 8 },
       { date: "Jun 1, 2026", seats: 5, seatsTotal: 5 },
@@ -90,6 +91,10 @@ const TREKS: Trek[] = [
       "Shared camp stays",
       "Meals during trek",
     ],
+    exclusions: [],
+    meetingLabel: "",
+    meetingMapsUrl: "",
+    propertyYoutubeUrl: "",
     batches: [
       { date: "Apr 15, 2026", seats: 12, seatsTotal: 12 },
       { date: "May 15, 2026", seats: 8, seatsTotal: 8 },
@@ -109,6 +114,10 @@ const TREKS: Trek[] = [
       "Tented accommodation",
       "Meals on trek",
     ],
+    exclusions: [],
+    meetingLabel: "",
+    meetingMapsUrl: "",
+    propertyYoutubeUrl: "",
     batches: [
       { date: "Dec 15, 2026", seats: 10, seatsTotal: 10 },
       { date: "Jan 10, 2027", seats: 6, seatsTotal: 6 },
@@ -130,6 +139,9 @@ function tourPackageToTrek(p: TourPackage): Trek {
   const { duration, altitude, difficulty } = parseTrekSubtitle(
     p.shortDescription,
   );
+  const exclusions = (tl.packageExclusions ?? [])
+    .map((s) => String(s).trim())
+    .filter(Boolean);
   return {
     name: p.name,
     price: Number(f.pricePerPersonINR),
@@ -140,6 +152,10 @@ function tourPackageToTrek(p: TourPackage): Trek {
     difficultyColor: parseTrekDifficultyColor(tl.longDescription),
     packageId: p.id,
     inclusions: f.inclusions ?? [],
+    exclusions,
+    meetingLabel: String(tl.meetingPointLabel ?? "").trim(),
+    meetingMapsUrl: String(tl.meetingPointMapsUrl ?? "").trim(),
+    propertyYoutubeUrl: String(tl.propertyYoutubeUrl ?? "").trim(),
     batches: f.batches.map((b) => ({
       date: b.dateLabel,
       seats: Number(b.seatsRemaining),
@@ -156,7 +172,6 @@ export default function TreksExpeditionsPage({ setPage }: Props) {
     trek: Trek;
     batch: Batch;
   } | null>(null);
-  const [form, setForm] = useState({ name: "", email: "", phone: "" });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -193,13 +208,13 @@ export default function TreksExpeditionsPage({ setPage }: Props) {
 
   const catalogMode = !!(trekPkgs && trekPkgs.length > 0);
 
-  const handleBook = async () => {
+  const handleBook = async (payload: {
+    customerName: string;
+    customerEmail: string;
+    customerPhone: string;
+  }) => {
     if (!actor) {
       toast.error("Please wait, connecting...");
-      return;
-    }
-    if (!form.name || !form.email || !form.phone) {
-      toast.error("Please fill all fields");
       return;
     }
     if (!bookingTarget) return;
@@ -218,18 +233,18 @@ export default function TreksExpeditionsPage({ setPage }: Props) {
           batch.date,
           BigInt(1),
           [],
-          form.name,
-          form.email,
-          form.phone,
+          payload.customerName,
+          payload.customerEmail,
+          payload.customerPhone,
           BigInt(trek.price),
         );
       } else {
         await actor.createBooking(
           "Trek & Expedition",
           trek.name,
-          form.name,
-          form.email,
-          form.phone,
+          payload.customerName,
+          payload.customerEmail,
+          payload.customerPhone,
           batch.date,
           BigInt(1),
           [],
@@ -238,7 +253,6 @@ export default function TreksExpeditionsPage({ setPage }: Props) {
       }
       toast.success("Trek booked! Adventure awaits. 🏔");
       setBookingTarget(null);
-      setForm({ name: "", email: "", phone: "" });
     } catch {
       toast.error("Booking failed. Please try again.");
     } finally {
@@ -376,10 +390,7 @@ export default function TreksExpeditionsPage({ setPage }: Props) {
                     </div>
                   </div>
                   {trek.inclusions.length > 0 ? (
-                    <div
-                      className="rounded-xl border border-border p-4 mb-2"
-                      style={{ background: "oklch(0.14 0.038 228 / 0.5)" }}
-                    >
+                    <div className="rounded-xl border p-4 mb-2 select-card-warm">
                       <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
                         What&apos;s included
                       </p>
@@ -390,6 +401,52 @@ export default function TreksExpeditionsPage({ setPage }: Props) {
                       </ul>
                     </div>
                   ) : null}
+                  {trek.exclusions.length > 0 ? (
+                    <div className="rounded-xl border border-border/70 p-4 mb-2 select-card-warm">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
+                        Not included
+                      </p>
+                      <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-4">
+                        {trek.exclusions.map((line, i) => (
+                          <li key={`ex-${i}-${line}`}>{line}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                  {(trek.meetingLabel ||
+                    trek.meetingMapsUrl ||
+                    trek.propertyYoutubeUrl) ? (
+                    <div className="flex flex-wrap gap-3 text-sm mb-2">
+                      {trek.meetingLabel ? (
+                        <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                          <MapPin className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                          <span>{trek.meetingLabel}</span>
+                        </span>
+                      ) : null}
+                      {trek.meetingMapsUrl ? (
+                        <a
+                          href={trek.meetingMapsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-semibold underline"
+                          style={{ color: "oklch(var(--brand-blue))" }}
+                        >
+                          Maps
+                        </a>
+                      ) : null}
+                      {trek.propertyYoutubeUrl ? (
+                        <a
+                          href={trek.propertyYoutubeUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-semibold underline"
+                          style={{ color: "oklch(var(--brand-blue))" }}
+                        >
+                          YouTube
+                        </a>
+                      ) : null}
+                    </div>
+                  ) : null}
                   <div className="space-y-3">
                     <p className="text-xs text-muted-foreground uppercase tracking-wider">
                       Available batches
@@ -398,13 +455,14 @@ export default function TreksExpeditionsPage({ setPage }: Props) {
                       {trek.batches.map((batch) => (
                         <div
                           key={`${trek.name}-${batch.batchId ?? batch.date}`}
-                          className="flex items-center gap-3 rounded-xl px-4 py-3 border"
+                          className={`flex items-center gap-3 rounded-xl px-4 py-3 border select-card-warm ${
+                            batch.seats === 0 ? "opacity-75" : ""
+                          }`}
                           style={{
                             borderColor:
                               batch.seats === 0
-                                ? "oklch(0.25 0.04 25 / 0.5)"
-                                : "oklch(0.25 0.04 192 / 0.5)",
-                            background: "oklch(0.15 0.04 228)",
+                                ? "oklch(0.55 0.12 25 / 0.45)"
+                                : "oklch(0.72 0.08 200 / 0.45)",
                           }}
                         >
                           <div>
@@ -448,112 +506,19 @@ export default function TreksExpeditionsPage({ setPage }: Props) {
         </div>
       </div>
 
-      <Dialog
+      <CatalogBookingCheckoutDialog
         open={!!bookingTarget}
         onOpenChange={(o) => !o && setBookingTarget(null)}
-      >
-        <DialogContent
-          data-ocid="trek.booking.dialog"
-          className="sm:max-w-md"
-          style={{
-            background: "oklch(0.99 0.006 248)",
-            border: "1px solid oklch(0.88 0.02 248 / 0.6)",
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle className="font-display">
-              Book:{" "}
-              <span style={{ color: "oklch(var(--brand-blue))" }}>
-                {bookingTarget?.trek.name}
-              </span>
-            </DialogTitle>
-          </DialogHeader>
-          {bookingTarget && (
-            <div className="space-y-4 mt-2">
-              <div
-                className="rounded-xl p-3 text-sm"
-                style={{ background: "oklch(0.13 0.036 228)" }}
-              >
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    {bookingTarget.batch.date}
-                  </span>
-                  <span
-                    className="font-bold"
-                    style={{ color: "oklch(var(--brand-blue))" }}
-                  >
-                    ₹{bookingTarget.trek.price.toLocaleString("en-IN")}/pp
-                  </span>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <Label className="text-xs text-muted-foreground mb-1.5 block">
-                    Full Name
-                  </Label>
-                  <Input
-                    data-ocid="trek.booking.input"
-                    placeholder="Ravi Kumar"
-                    value={form.name}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, name: e.target.value }))
-                    }
-                    className="bg-muted/70 border-border"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground mb-1.5 block">
-                    Email
-                  </Label>
-                  <Input
-                    data-ocid="trek.booking.input"
-                    type="email"
-                    placeholder="ravi@email.com"
-                    value={form.email}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, email: e.target.value }))
-                    }
-                    className="bg-muted/70 border-border"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground mb-1.5 block">
-                    Phone
-                  </Label>
-                  <Input
-                    data-ocid="trek.booking.input"
-                    placeholder="+91 9876543210"
-                    value={form.phone}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, phone: e.target.value }))
-                    }
-                    className="bg-muted/70 border-border"
-                  />
-                </div>
-              </div>
-              <Button
-                data-ocid="trek.booking.submit_button"
-                onClick={handleBook}
-                disabled={loading}
-                className="w-full font-bold"
-                style={{
-                  background: "oklch(var(--brand-blue))",
-                  color: "oklch(0.985 0.005 85)",
-                }}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  "Confirm Booking"
-                )}
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+        productTitle={bookingTarget?.trek.name ?? ""}
+        categoryLine="Trek & Expedition"
+        summaryImageUrl={bookingTarget?.trek.image}
+        dateFromLabel={bookingTarget?.batch.date}
+        guestsLine="1 person"
+        subtotalINR={bookingTarget?.trek.price ?? 0}
+        gstPercent={0}
+        loading={loading}
+        onSubmit={(p) => void handleBook(p)}
+      />
 
       <footer className="text-center py-8 mt-16 text-xs text-muted-foreground border-t border-border">
         <Mountain className="w-4 h-4 inline mr-1" />

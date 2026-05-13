@@ -14,9 +14,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, Mail, MapPin, User, Users, X } from "lucide-react";
-import { useState } from "react";
+import { Calendar as CalendarGlyph, Mail, MapPin, User, Users, X } from "lucide-react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import DatePickerField, { parseIsoDateLocal } from "./DatePickerField";
 
 const DESTINATIONS = [
   "Santorini, Greece",
@@ -45,6 +46,18 @@ export default function BookingModal({
     email: "",
   });
   const [loading, setLoading] = useState(false);
+
+  const checkoutFromDate = useMemo(() => {
+    const ci = parseIsoDateLocal(form.checkIn);
+    if (!ci) return undefined;
+    return new Date(ci.getFullYear(), ci.getMonth(), ci.getDate() + 1);
+  }, [form.checkIn]);
+
+  const checkinToDate = useMemo(() => {
+    const co = parseIsoDateLocal(form.checkOut);
+    if (!co) return undefined;
+    return new Date(co.getFullYear(), co.getMonth(), co.getDate() - 1);
+  }, [form.checkOut]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,23 +133,23 @@ export default function BookingModal({
                 htmlFor="booking-checkin"
                 className="text-sm text-muted-foreground flex items-center gap-1.5"
               >
-                <Calendar className="w-3.5 h-3.5 text-cyan" /> Check In
+                <CalendarGlyph className="w-3.5 h-3.5 text-cyan" /> Check In
               </Label>
-              <Input
+              <DatePickerField
                 id="booking-checkin"
-                data-ocid="booking.input"
-                type="date"
                 value={form.checkIn}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, checkIn: e.target.value }))
+                onChange={(v) =>
+                  setForm((p) => ({
+                    ...p,
+                    checkIn: v,
+                    checkOut:
+                      p.checkOut && v && p.checkOut <= v ? "" : p.checkOut,
+                  }))
                 }
-                className="text-foreground"
-                style={{
-                  background: "oklch(0.99 0.006 248)",
-                  borderColor: "oklch(0.88 0.02 248)",
-                  colorScheme: "dark",
-                }}
+                placeholder="Check-in date"
+                toDate={checkinToDate}
                 required
+                triggerClassName="text-foreground bg-muted/70 border-border"
               />
             </div>
             <div className="space-y-1.5">
@@ -144,22 +157,16 @@ export default function BookingModal({
                 htmlFor="booking-checkout"
                 className="text-sm text-muted-foreground flex items-center gap-1.5"
               >
-                <Calendar className="w-3.5 h-3.5 text-cyan" /> Check Out
+                <CalendarGlyph className="w-3.5 h-3.5 text-cyan" /> Check Out
               </Label>
-              <Input
+              <DatePickerField
                 id="booking-checkout"
-                type="date"
                 value={form.checkOut}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, checkOut: e.target.value }))
-                }
-                className="text-foreground"
-                style={{
-                  background: "oklch(0.99 0.006 248)",
-                  borderColor: "oklch(0.88 0.02 248)",
-                  colorScheme: "dark",
-                }}
+                onChange={(v) => setForm((p) => ({ ...p, checkOut: v }))}
+                placeholder="Check-out date"
+                fromDate={checkoutFromDate}
                 required
+                triggerClassName="text-foreground bg-muted/70 border-border"
               />
             </div>
           </div>

@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import DatePickerField from "@/components/DatePickerField";
 import {
   ArrowLeft,
   CheckCircle,
@@ -8,7 +9,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { LOGO_URL } from "@/branding";
 import experienceAbove from "@/assets/generated/experience-above-clouds.dim_800x500.jpg";
 import experienceSnow from "@/assets/generated/experience-snow-training.dim_800x500.jpg";
@@ -147,6 +148,12 @@ export default function TrekDetailPage({
   const [guests, setGuests] = useState("2");
   const routeRef = useRef<SVGPathElement>(null);
   const [routeVisible, setRouteVisible] = useState(false);
+
+  const trekDateMin = useMemo(() => {
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    return t;
+  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -698,19 +705,16 @@ export default function TrekDetailPage({
                   >
                     Trek Date
                   </label>
-                  <input
-                    id="trek-date"
-                    data-ocid="booking.input"
-                    type="date"
-                    value={bookingDate}
-                    onChange={(e) => setBookingDate(e.target.value)}
-                    className="w-full rounded-lg px-3 py-2 text-sm text-foreground"
-                    style={{
-                      background: "oklch(0.99 0.006 248)",
-                      border: "1px solid oklch(0.88 0.02 248)",
-                      colorScheme: "dark",
-                    }}
-                  />
+                  <div data-ocid="booking.input">
+                    <DatePickerField
+                      id="trek-date"
+                      value={bookingDate}
+                      onChange={setBookingDate}
+                      placeholder="Pick trek date"
+                      fromDate={trekDateMin}
+                      triggerClassName="w-full rounded-lg px-3 py-2 text-sm h-auto min-h-[42px] justify-start bg-muted/70 border-border"
+                    />
+                  </div>
                 </div>
 
                 <div>

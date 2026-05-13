@@ -1,4 +1,18 @@
-@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Bricolage+Grotesque:wght@400;600;700;800&display=swap");
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: url("/assets/fonts/PlusJakartaSans.woff2") format("woff2");
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("/assets/fonts/BricolageGrotesque.ttf") format("truetype");
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+}
 
 @tailwind base;
 @tailwind components;
@@ -82,6 +96,49 @@
     background: oklch(0.99 0.006 248 / 0.82);
     backdrop-filter: blur(16px);
     border: 1px solid oklch(0.88 0.02 248 / 0.65);
+  }
+  /**
+   * Replaces flat dark grey (oklch ~0.15 0.04 228) on selectable rows:
+   * add-ons, tier chips, trek/fixed batches, hotel room types, checkout add-ons.
+   */
+  .select-card-warm {
+    border: 1px solid oklch(0.78 0.045 220 / 0.42);
+    background: linear-gradient(
+      155deg,
+      oklch(0.995 0.022 208) 0%,
+      oklch(0.975 0.048 228) 42%,
+      oklch(0.968 0.032 248) 100%
+    );
+    box-shadow:
+      0 1px 0 oklch(1 0 0 / 0.92) inset,
+      0 6px 22px oklch(var(--brand-blue) / 0.08);
+  }
+  .select-card-warm-selected {
+    border-color: oklch(var(--brand-blue) / 0.5);
+    background: linear-gradient(
+      155deg,
+      oklch(0.99 0.04 205) 0%,
+      oklch(0.955 0.075 228) 48%,
+      oklch(0.948 0.055 248) 100%
+    );
+    box-shadow:
+      0 1px 0 oklch(1 0 0 / 0.88) inset,
+      0 0 0 1px oklch(var(--brand-blue) / 0.14),
+      0 10px 30px oklch(var(--brand-blue) / 0.17);
+  }
+  .meta-hint-strip {
+    border: 1px solid oklch(0.78 0.04 220 / 0.4);
+    background: linear-gradient(
+      135deg,
+      oklch(0.99 0.028 215) 0%,
+      oklch(0.972 0.04 235) 100%
+    );
+    box-shadow: 0 4px 18px oklch(var(--brand-blue) / 0.07);
+  }
+  .chip-airy {
+    border: 1px solid oklch(0.72 0.06 228 / 0.38);
+    background: oklch(0.97 0.04 228 / 0.96);
+    color: oklch(0.3 0.045 255);
   }
   .card-3d {
     transform-style: preserve-3d;

@@ -1,26 +1,22 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import CatalogBookingCheckoutDialog from "@/components/CatalogBookingCheckoutDialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { useActor } from "@/hooks/useActor";
-import { ArrowLeft, Loader2, Mountain, Users } from "lucide-react";
+import { ArrowLeft, Mountain, Users } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { PrivateCfg, TourPackage } from "../backend";
 import {
+  itineraryPlansFromTourPackage,
   packageForPrivatePage,
   type TourPackageListing,
 } from "../utils/catalogListing";
 import type { Page } from "../types";
+import DatePickerField from "./DatePickerField";
 
 interface Props {
   setPage: (page: Page) => void;
@@ -110,13 +106,14 @@ export default function PrivatePackagesPage({ setPage }: Props) {
   const [groupSize, setGroupSize] = useState(2);
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
   const [bookingPkg, setBookingPkg] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    date: "",
-  });
+  const [bookingTravelDate, setBookingTravelDate] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const travelDateMin = useMemo(() => {
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    return t;
+  }, []);
 
   useEffect(() => {
     if (!actor) return;
@@ -150,7 +147,7 @@ export default function PrivatePackagesPage({ setPage }: Props) {
 
   const templateItinerary = useMemo(() => {
     if (!catalogMode || !template) return [];
-    return (privateCfgOf(template).itineraryDays ?? []).map(String);
+    return itineraryPlansFromTourPackage(template);
   }, [catalogMode, template]);
 
   const effectiveTiers = useMemo(() => {
@@ -240,13 +237,27 @@ export default function PrivatePackagesPage({ setPage }: Props) {
     );
   };
 
-  const handleBook = async () => {
+  const bookingSummaryImage = useMemo(() => {
+    if (!bookingPkg) return undefined;
+    if (catalogMode && template) {
+      const tl = template as TourPackageListing;
+      const thumb = String(tl.thumbnailUrl ?? "").trim();
+      return thumb || template.heroImageUrl;
+    }
+    return PACKAGES.find((p) => p.name === bookingPkg)?.image;
+  }, [bookingPkg, catalogMode, template]);
+
+  const handleBook = async (payload: {
+    customerName: string;
+    customerEmail: string;
+    customerPhone: string;
+  }) => {
     if (!actor) {
       toast.error("Please wait, connecting...");
       return;
     }
-    if (!form.name || !form.email || !form.phone || !form.date) {
-      toast.error("Please fill all fields");
+    if (!bookingTravelDate.trim()) {
+      toast.error("Please choose your preferred travel date.");
       return;
     }
     if (!bookingPkg) return;
@@ -265,22 +276,22 @@ export default function PrivatePackagesPage({ setPage }: Props) {
           tourPkg.id,
           undefined,
           tierOpt,
-          form.date,
+          bookingTravelDate,
           BigInt(groupSize),
           selectedAddOns.map((id) => BigInt(id)),
-          form.name,
-          form.email,
-          form.phone,
+          payload.customerName,
+          payload.customerEmail,
+          payload.customerPhone,
           BigInt(grandTotal),
         );
       } else {
         await actor.createBooking(
           "Private Travel",
           `${bookingPkg} — ${tierLabel}`,
-          form.name,
-          form.email,
-          form.phone,
-          form.date,
+          payload.customerName,
+          payload.customerEmail,
+          payload.customerPhone,
+          bookingTravelDate,
           BigInt(groupSize),
           addOnLabels,
           BigInt(grandTotal),
@@ -288,7 +299,7 @@ export default function PrivatePackagesPage({ setPage }: Props) {
       }
       toast.success("Booking confirmed! We'll contact you soon.");
       setBookingPkg(null);
-      setForm({ name: "", email: "", phone: "", date: "" });
+      setBookingTravelDate("");
     } catch {
       toast.error("Booking failed. Please try again.");
     } finally {
@@ -379,20 +390,20 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                     type="button"
                     data-ocid="private.tier.toggle"
                     onClick={() => setSelectedTier(i)}
-                    className="rounded-xl p-4 border text-left transition-all duration-200"
+                    className={`rounded-xl p-4 border text-left transition-all duration-200 ${
+                      selectedTier === i
+                        ? "select-card-warm-selected"
+                        : "select-card-warm"
+                    }`}
                     style={{
                       borderColor:
                         selectedTier === i
                           ? tier.color
-                          : "oklch(0.88 0.02 248 / 0.6)",
-                      background:
-                        selectedTier === i
-                          ? "oklch(0.98 0.009 248)"
-                          : "oklch(0.15 0.038 228 / 0.4)",
+                          : undefined,
                       boxShadow:
                         selectedTier === i
-                          ? `0 0 20px ${tier.color}33`
-                          : "none",
+                          ? "0 0 26px oklch(var(--brand-blue) / 0.22)"
+                          : undefined,
                     }}
                   >
                     <div
@@ -401,7 +412,7 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                         color:
                           selectedTier === i
                             ? tier.color
-                            : "oklch(0.76 0.03 228)",
+                            : "oklch(0.32 0.05 255)",
                       }}
                     >
                       {tier.label}
@@ -473,8 +484,7 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                   ].map(([label, price]) => (
                     <div
                       key={label}
-                      className="rounded-lg p-3 text-sm"
-                      style={{ background: "oklch(0.15 0.04 228)" }}
+                      className="rounded-lg p-3 text-sm select-card-warm"
                     >
                       <div className="text-muted-foreground">{label}</div>
                       <div
@@ -508,15 +518,11 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                   <label
                     key={addOn.id}
                     htmlFor={`addon-${addOn.id}`}
-                    className="flex items-center gap-3 rounded-xl p-4 cursor-pointer transition-all border"
-                    style={{
-                      borderColor: selectedAddOns.includes(addOn.id)
-                        ? "oklch(var(--brand-blue) / 0.5)"
-                        : "oklch(0.26 0.04 228 / 0.5)",
-                      background: selectedAddOns.includes(addOn.id)
-                        ? "oklch(0.16 0.04 192 / 0.3)"
-                        : "oklch(0.15 0.038 228 / 0.3)",
-                    }}
+                    className={`flex items-center gap-3 rounded-xl p-4 cursor-pointer transition-all border ${
+                      selectedAddOns.includes(addOn.id)
+                        ? "select-card-warm-selected"
+                        : "select-card-warm"
+                    }`}
                   >
                     <Checkbox
                       id={`addon-${addOn.id}`}
@@ -560,20 +566,27 @@ export default function PrivatePackagesPage({ setPage }: Props) {
                   . Final routing can be tailored to your group.
                 </p>
                 <ol className="space-y-4">
-                  {templateItinerary.map((desc, i) => (
+                  {templateItinerary.map((day, i) => (
                     <li
-                      key={`${i}-${desc.slice(0, 24)}`}
-                      className="flex gap-3 text-sm"
+                      key={`${i}-${(day.title + day.description).slice(0, 24)}`}
+                      className="flex flex-col gap-1 text-sm sm:flex-row sm:gap-3"
                     >
                       <span
-                        className="shrink-0 font-bold w-14"
+                        className="shrink-0 font-bold sm:w-14"
                         style={{ color: "oklch(var(--brand-blue))" }}
                       >
                         Day {i + 1}
                       </span>
-                      <span className="text-muted-foreground leading-relaxed">
-                        {desc}
-                      </span>
+                      <div className="text-muted-foreground leading-relaxed min-w-0">
+                        {day.title.trim() ? (
+                          <p className="font-medium text-foreground mb-1">
+                            {day.title}
+                          </p>
+                        ) : null}
+                        {day.description.trim() ? (
+                          <p className="whitespace-pre-wrap">{day.description}</p>
+                        ) : null}
+                      </div>
                     </li>
                   ))}
                 </ol>
@@ -743,141 +756,55 @@ export default function PrivatePackagesPage({ setPage }: Props) {
         </div>
       </div>
 
-      {/* Booking Dialog */}
-      <Dialog
+      <CatalogBookingCheckoutDialog
         open={!!bookingPkg}
         onOpenChange={(o) => !o && setBookingPkg(null)}
-      >
-        <DialogContent
-          data-ocid="private.booking.dialog"
-          className="sm:max-w-md"
-          style={{
-            background: "oklch(0.99 0.006 248)",
-            border: "1px solid oklch(0.88 0.02 248 / 0.6)",
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle className="font-display">
-              Book:{" "}
-              <span style={{ color: "oklch(var(--brand-blue))" }}>
-                {bookingPkg}
-              </span>
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 mt-2">
-            <div
-              className="rounded-xl p-3 text-sm"
-              style={{ background: "oklch(0.13 0.036 228)" }}
+        productTitle={bookingPkg ?? ""}
+        categoryLine="Private tour"
+        summaryImageUrl={bookingSummaryImage}
+        extraSummaryRows={[
+          {
+            label: "Tier",
+            value: effectiveTiers[selectedTier]!.label,
+          },
+        ]}
+        dateFromLabel={
+          bookingTravelDate.trim()
+            ? new Date(bookingTravelDate + "T12:00:00").toLocaleDateString(
+                "en-IN",
+                {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                },
+              )
+            : undefined
+        }
+        guestsLine={`${groupSize} person${groupSize > 1 ? "s" : ""}`}
+        subtotalINR={grandTotal}
+        gstPercent={0}
+        extraGuestSlots={Math.max(0, groupSize - 1)}
+        loading={loading}
+        formTop={
+          <div>
+            <Label
+              htmlFor="private-book-date"
+              className="text-xs text-muted-foreground mb-1.5 block"
             >
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">
-                  {effectiveTiers[selectedTier]!.label} · {groupSize} people
-                </span>
-                <span
-                  className="font-bold"
-                  style={{ color: "oklch(var(--brand-blue))" }}
-                >
-                  ₹{grandTotal.toLocaleString("en-IN")}
-                </span>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <Label
-                  htmlFor="pk-name"
-                  className="text-xs text-muted-foreground mb-1.5 block"
-                >
-                  Full Name
-                </Label>
-                <Input
-                  id="pk-name"
-                  data-ocid="private.booking.input"
-                  placeholder="Ravi Kumar"
-                  value={form.name}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, name: e.target.value }))
-                  }
-                  className="bg-muted/70 border-border"
-                />
-              </div>
-              <div>
-                <Label
-                  htmlFor="pk-email"
-                  className="text-xs text-muted-foreground mb-1.5 block"
-                >
-                  Email
-                </Label>
-                <Input
-                  id="pk-email"
-                  data-ocid="private.booking.input"
-                  type="email"
-                  placeholder="ravi@email.com"
-                  value={form.email}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, email: e.target.value }))
-                  }
-                  className="bg-muted/70 border-border"
-                />
-              </div>
-              <div>
-                <Label
-                  htmlFor="pk-phone"
-                  className="text-xs text-muted-foreground mb-1.5 block"
-                >
-                  Phone
-                </Label>
-                <Input
-                  id="pk-phone"
-                  data-ocid="private.booking.input"
-                  placeholder="+91 9876543210"
-                  value={form.phone}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, phone: e.target.value }))
-                  }
-                  className="bg-muted/70 border-border"
-                />
-              </div>
-              <div>
-                <Label
-                  htmlFor="pk-date"
-                  className="text-xs text-muted-foreground mb-1.5 block"
-                >
-                  Preferred Travel Date
-                </Label>
-                <Input
-                  id="pk-date"
-                  data-ocid="private.booking.input"
-                  type="date"
-                  value={form.date}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, date: e.target.value }))
-                  }
-                  className="bg-muted/70 border-border"
-                />
-              </div>
-            </div>
-            <Button
-              data-ocid="private.booking.submit_button"
-              onClick={handleBook}
-              disabled={loading}
-              className="w-full font-bold"
-              style={{
-                background: "oklch(var(--brand-blue))",
-                color: "oklch(0.985 0.005 85)",
-              }}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                "Confirm Booking"
-              )}
-            </Button>
+              Preferred travel date
+            </Label>
+            <DatePickerField
+              id="private-book-date"
+              value={bookingTravelDate}
+              onChange={setBookingTravelDate}
+              placeholder="Pick a date"
+              fromDate={travelDateMin}
+              triggerClassName="bg-muted/70 border-border w-full"
+            />
           </div>
-        </DialogContent>
-      </Dialog>
+        }
+        onSubmit={(p) => void handleBook(p)}
+      />
 
       <footer className="text-center py-8 mt-16 text-xs text-muted-foreground border-t border-border">
         <Mountain className="w-4 h-4 inline mr-1" />

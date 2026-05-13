@@ -4,9 +4,11 @@
  */
 
 import dotenv from "dotenv";
+import crypto from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Principal } from "@icp-sdk/core/principal";
+import Razorpay from "razorpay";
 
 dotenv.config({
   path: join(dirname(fileURLToPath(import.meta.url)), "..", ".env"),
@@ -15,7 +17,13 @@ import cors from "cors";
 import express from "express";
 import { attachCatalogMediaRoutes } from "./catalog-media-upload.mjs";
 import { attachCatalogRoutes } from "./catalog-api.mjs";
-import { dbListAllBookings, dbInsertBooking, dbListBookingsByEmail, dbUpdateBookingStatus } from "./db/bookings.mjs";
+import {
+  dbGetBookingById,
+  dbListAllBookings,
+  dbInsertBooking,
+  dbListBookingsByEmail,
+  dbUpdateBookingStatus,
+} from "./db/bookings.mjs";
 import { runMigrations } from "./db/migrate.mjs";
 import { createPoolFromEnv, isDatabaseEnabled } from "./db/pool.mjs";
 import {
@@ -249,11 +257,22 @@ async function bootstrap() {
   const userRoles = new Map();
   /** @type {Map<number, object>} */
   const bookings = new Map();
+  /** @type {Map<string, { bookingId: number, amountPaise: number, verified: boolean }>} */
+  const razorpayOrders = new Map();
   /** @type {Map<string, number[]>} */
   const bookingsByEmail = new Map();
   let nextBookingId = 1;
   /** @type {Map<string, { name: string, email: string, phone: string }>} */
   const userProfiles = new Map();
+  const razorpayKeyId = process.env.RAZORPAY_KEY_ID?.trim() || "";
+  const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET?.trim() || "";
+  const razorpayEnabled = Boolean(razorpayKeyId && razorpayKeySecret);
+  const razorpay = razorpayEnabled
+    ? new Razorpay({
+        key_id: razorpayKeyId,
+        key_secret: razorpayKeySecret,
+      })
+    : null;
 
   attachUserLocalAuthRoutes(app, {
     pool,
@@ -368,6 +387,11 @@ async function bootstrap() {
     const existing = bookingsByEmail.get(booking.customerEmail) ?? [];
     bookingsByEmail.set(booking.customerEmail, [...existing, id]);
     return id;
+  }
+
+  async function getBookingById(bookingId) {
+    if (pool) return dbGetBookingById(pool, bookingId);
+    return bookings.get(bookingId) ?? null;
   }
 
   app.post("/init-access", async (req, res) => {
@@ -533,6 +557,108 @@ async function bootstrap() {
         return;
       }
       res.json([...bookings.values()].map(bookingToJson));
+    } catch (e) {
+      res.status(500).json({ error: String(e.message || e) });
+    }
+  });
+
+  app.post("/payments/create-order", async (req, res) => {
+    try {
+      if (!razorpayEnabled || !razorpay) {
+        res.status(503).json({ error: "Razorpay is not configured on server" });
+        return;
+      }
+      const bookingId = Number(req.body?.bookingId);
+      if (!Number.isFinite(bookingId) || bookingId <= 0) {
+        res.status(400).json({ error: "Invalid booking id" });
+        return;
+      }
+      const booking = await getBookingById(bookingId);
+      if (!booking) {
+        res.status(404).json({ error: "Booking not found" });
+        return;
+      }
+      if (booking.status !== "pending") {
+        res.status(400).json({ error: "Booking is not eligible for payment" });
+        return;
+      }
+      const amountPaise = Number(booking.totalPriceINR) * 100;
+      if (!Number.isFinite(amountPaise) || amountPaise <= 0) {
+        res.status(400).json({ error: "Invalid payable amount" });
+        return;
+      }
+      const receipt = `booking-${bookingId}-${Date.now()}`;
+      const order = await razorpay.orders.create({
+        amount: amountPaise,
+        currency: "INR",
+        receipt,
+        payment_capture: 1,
+        notes: {
+          bookingId: String(bookingId),
+          customerEmail: booking.customerEmail,
+          customerPhone: booking.customerPhone,
+        },
+      });
+      razorpayOrders.set(order.id, {
+        bookingId,
+        amountPaise,
+        verified: false,
+      });
+      res.json({
+        keyId: razorpayKeyId,
+        orderId: order.id,
+        amount: order.amount,
+        currency: order.currency,
+      });
+    } catch (e) {
+      res.status(500).json({ error: String(e.message || e) });
+    }
+  });
+
+  app.post("/payments/verify", async (req, res) => {
+    try {
+      if (!razorpayEnabled) {
+        res.status(503).json({ error: "Razorpay is not configured on server" });
+        return;
+      }
+      const razorpayOrderId = String(req.body?.razorpay_order_id ?? "").trim();
+      const razorpayPaymentId = String(req.body?.razorpay_payment_id ?? "").trim();
+      const razorpaySignature = String(req.body?.razorpay_signature ?? "").trim();
+      if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+        res.status(400).json({ error: "Payment verification payload is incomplete" });
+        return;
+      }
+      const orderMeta = razorpayOrders.get(razorpayOrderId);
+      if (!orderMeta) {
+        res.status(400).json({ error: "Unknown order id" });
+        return;
+      }
+      if (orderMeta.verified) {
+        res.json({ ok: true, bookingId: String(orderMeta.bookingId) });
+        return;
+      }
+      const expected = crypto
+        .createHmac("sha256", razorpayKeySecret)
+        .update(`${razorpayOrderId}|${razorpayPaymentId}`)
+        .digest("hex");
+      if (expected !== razorpaySignature) {
+        res.status(400).json({ error: "Invalid payment signature" });
+        return;
+      }
+      const ok = pool
+        ? await dbUpdateBookingStatus(pool, orderMeta.bookingId, "confirmed")
+        : (() => {
+            const b = bookings.get(orderMeta.bookingId);
+            if (!b) return false;
+            bookings.set(orderMeta.bookingId, { ...b, status: "confirmed" });
+            return true;
+          })();
+      if (!ok) {
+        res.status(404).json({ error: "Booking not found for this order" });
+        return;
+      }
+      razorpayOrders.set(razorpayOrderId, { ...orderMeta, verified: true });
+      res.json({ ok: true, bookingId: String(orderMeta.bookingId) });
     } catch (e) {
       res.status(500).json({ error: String(e.message || e) });
     }

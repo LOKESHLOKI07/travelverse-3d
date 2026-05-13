@@ -40,6 +40,16 @@ export enum UserRole {
     user = "user",
     guest = "guest"
 }
+/** Optional breakdown for Node private tours with a per-party-size price matrix. */
+export type PrivatePartyBookingBreakdown = {
+    adults: number;
+    childrenUnder6: number;
+    children6To10: number;
+    children11Plus: number;
+};
+export type CatalogBookingExtras = {
+    villaMealIncluded?: boolean;
+};
 export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
@@ -55,6 +65,8 @@ export interface backendInterface {
         customerEmail: string,
         customerPhone: string,
         claimedTotalPriceINR: bigint,
+        privatePartyBreakdown?: PrivatePartyBookingBreakdown,
+        catalogExtras?: CatalogBookingExtras,
     ): Promise<bigint>;
     listCatalog(): Promise<Array<unknown>>;
     getPackage(packageId: bigint): Promise<unknown>;

@@ -1,6 +1,7 @@
 import heroMountains from "@/assets/generated/hero-mountains.dim_1920x1080.jpg";
 import { LOGO_URL } from "@/branding";
 import SnowTerrain3D from "@/components/SnowTerrain3D";
+import DatePickerField from "@/components/DatePickerField";
 import ThreeErrorBoundary from "@/components/ThreeErrorBoundary";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,8 +53,9 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 import type { ComponentType } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { PackageSearchFilters, Page } from "../types";
+import { takeQueuedHomeSectionScroll } from "../utils/homeScrollQueue";
 import { getUserBearerToken } from "../utils/userLocalSession";
 import { viteEnvIsTrue } from "../utils/viteEnv";
 
@@ -247,13 +249,6 @@ const SOCIAL_LINKS: {
   },
 ];
 
-const HOME_HEADER_SECTION_LINKS: [string, string][] = [
-  ["Home", ""],
-  ["Treks", "treks"],
-  ["About", "about"],
-  ["Contact", "contact"],
-];
-
 export default function HomePage({
   setPage,
   openPackagesCatalog,
@@ -288,6 +283,14 @@ export default function HomePage({
     logDevBundledImages({ logoMountain: LOGO_URL, heroMountains });
   }, []);
 
+  useEffect(() => {
+    const id = takeQueuedHomeSectionScroll();
+    if (!id) return;
+    window.requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+    });
+  }, []);
+
   const scrollToSection = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   };
@@ -313,6 +316,12 @@ export default function HomePage({
       setTestimonialStart((prev) => (prev + 1) % TESTIMONIALS.length);
     }, 4000);
     return () => window.clearInterval(timer);
+  }, []);
+
+  const todayStart = useMemo(() => {
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    return t;
   }, []);
 
   return (
@@ -393,7 +402,7 @@ export default function HomePage({
             </button>
 
             <nav
-              className="hidden lg:flex flex-wrap items-center justify-center gap-x-5 gap-y-1 xl:gap-x-6 min-w-0"
+              className="hidden lg:flex flex-wrap items-center justify-center gap-x-4 gap-y-1 xl:gap-x-5 min-w-0"
               aria-label="Primary"
             >
               <button
@@ -410,23 +419,80 @@ export default function HomePage({
                 <DropdownMenuTrigger
                   className="flex items-center gap-0.5 text-sm font-semibold hover:opacity-75 outline-none cursor-pointer"
                   style={{ color: NAV_TEAL }}
-                  data-ocid="nav.tours.trigger"
+                  data-ocid="nav.treks_expeditions.trigger"
                 >
-                  Tours
+                  Treks &amp; Expeditions
                   <ChevronDown className="w-4 h-4 opacity-70" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="center" className="min-w-[12rem]">
                   <DropdownMenuItem
-                    onClick={() => scrollToSection("treks")}
-                    data-ocid="nav.tours.treks"
+                    onClick={() => setPage("treks-expeditions")}
+                    data-ocid="nav.treks_expeditions.trek"
                   >
-                    Featured treks
+                    Trek
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => openPackagesCatalog()}
-                    data-ocid="nav.tours.packages"
+                    onClick={() => setPage("treks-expeditions")}
+                    data-ocid="nav.treks_expeditions.expeditions"
                   >
-                    Browse packages
+                    Expeditions
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className="flex items-center gap-0.5 text-sm font-semibold hover:opacity-75 outline-none cursor-pointer"
+                  style={{ color: NAV_TEAL }}
+                  data-ocid="nav.packages.trigger"
+                >
+                  Packages
+                  <ChevronDown className="w-4 h-4 opacity-70" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" className="min-w-[12rem]">
+                  <DropdownMenuItem
+                    onClick={() => setPage("private-packages")}
+                    data-ocid="nav.packages.private"
+                  >
+                    Private packages
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      openPackagesCatalog({
+                        destination: "",
+                        date: "",
+                        guests: 1,
+                        catalogKinds: ["fixed", "trek"],
+                      })
+                    }
+                    data-ocid="nav.packages.group"
+                  >
+                    Group packages
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className="flex items-center gap-0.5 text-sm font-semibold hover:opacity-75 outline-none cursor-pointer"
+                  style={{ color: NAV_TEAL }}
+                  data-ocid="nav.hotels_villas.trigger"
+                >
+                  Hotels &amp; Villas
+                  <ChevronDown className="w-4 h-4 opacity-70" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" className="min-w-[14rem]">
+                  <DropdownMenuItem
+                    onClick={() => setPage("hotels")}
+                    data-ocid="nav.hotels_villas.hotels"
+                  >
+                    Hotels
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setPage("villas-farmhouses")}
+                    data-ocid="nav.hotels_villas.villas"
+                  >
+                    Farmhouses &amp; Villas
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -435,10 +501,10 @@ export default function HomePage({
                 type="button"
                 className="text-sm font-semibold hover:opacity-75"
                 style={{ color: NAV_TEAL }}
-                data-ocid="nav.destination"
-                onClick={() => scrollToSection("treks")}
+                data-ocid="nav.destinations"
+                onClick={() => openPackagesCatalog()}
               >
-                Destination
+                Destinations
               </button>
 
               <button
@@ -451,33 +517,13 @@ export default function HomePage({
                 Blog
               </button>
 
-              <button
-                type="button"
-                className="text-sm font-semibold hover:opacity-75"
-                style={{ color: NAV_TEAL }}
-                data-ocid="nav.about"
-                onClick={() => scrollToSection("about")}
-              >
-                About
-              </button>
-
-              <button
-                type="button"
-                className="text-sm font-semibold hover:opacity-75"
-                style={{ color: NAV_TEAL }}
-                data-ocid="nav.contact"
-                onClick={() => scrollToSection("contact")}
-              >
-                Contact
-              </button>
-
               <DropdownMenu>
                 <DropdownMenuTrigger
                   className="flex items-center gap-0.5 text-sm font-semibold hover:opacity-75 outline-none cursor-pointer"
                   style={{ color: NAV_TEAL }}
                   data-ocid="nav.services.trigger"
                 >
-                  Our services
+                  Our Services
                   <ChevronDown className="w-4 h-4 opacity-70" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="center" className="min-w-[14rem]">
@@ -519,6 +565,26 @@ export default function HomePage({
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
+
+              <button
+                type="button"
+                className="text-sm font-semibold hover:opacity-75"
+                style={{ color: NAV_TEAL }}
+                data-ocid="nav.about"
+                onClick={() => scrollToSection("about")}
+              >
+                About
+              </button>
+
+              <button
+                type="button"
+                className="text-sm font-semibold hover:opacity-75"
+                style={{ color: NAV_TEAL }}
+                data-ocid="nav.contact"
+                onClick={() => scrollToSection("contact")}
+              >
+                Contact
+              </button>
             </nav>
 
             <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 justify-end ml-auto lg:ml-0">
@@ -650,44 +716,111 @@ export default function HomePage({
               >
                 Home
               </button>
+              <p className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Treks &amp; Expeditions
+              </p>
               <button
                 type="button"
-                data-ocid="nav.mobile.treks"
+                data-ocid="nav.mobile.trek"
                 onClick={() => {
                   closeMobileNav();
-                  scrollToSection("treks");
+                  setPage("treks-expeditions");
                 }}
-                className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+                className="w-full rounded-md pl-6 pr-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
               >
-                Featured treks
+                Trek
               </button>
               <button
                 type="button"
-                data-ocid="nav.mobile.packages"
+                data-ocid="nav.mobile.expeditions"
+                onClick={() => {
+                  closeMobileNav();
+                  setPage("treks-expeditions");
+                }}
+                className="w-full rounded-md pl-6 pr-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+              >
+                Expeditions
+              </button>
+              <p className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Packages
+              </p>
+              <button
+                type="button"
+                data-ocid="nav.mobile.private_packages"
+                onClick={() => {
+                  closeMobileNav();
+                  setPage("private-packages");
+                }}
+                className="w-full rounded-md pl-6 pr-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+              >
+                Private packages
+              </button>
+              <button
+                type="button"
+                data-ocid="nav.mobile.group_packages"
+                onClick={() => {
+                  closeMobileNav();
+                  openPackagesCatalog({
+                    destination: "",
+                    date: "",
+                    guests: 1,
+                    catalogKinds: ["fixed", "trek"],
+                  });
+                }}
+                className="w-full rounded-md pl-6 pr-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+              >
+                Group packages
+              </button>
+              <p className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Hotels &amp; Villas
+              </p>
+              <button
+                type="button"
+                data-ocid="nav.mobile.hotels"
+                onClick={() => {
+                  closeMobileNav();
+                  setPage("hotels");
+                }}
+                className="w-full rounded-md pl-6 pr-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+              >
+                Hotels
+              </button>
+              <button
+                type="button"
+                data-ocid="nav.mobile.villas"
+                onClick={() => {
+                  closeMobileNav();
+                  setPage("villas-farmhouses");
+                }}
+                className="w-full rounded-md pl-6 pr-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+              >
+                Farmhouses &amp; Villas
+              </button>
+              <button
+                type="button"
+                data-ocid="nav.mobile.destinations"
                 onClick={() => {
                   closeMobileNav();
                   openPackagesCatalog();
                 }}
                 className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
               >
-                Browse packages
+                Destinations
               </button>
-              {HOME_HEADER_SECTION_LINKS.filter(([l]) => l !== "Home").map(
-                ([label, id]) => (
-                  <button
-                    key={label}
-                    type="button"
-                    data-ocid="nav.mobile.link"
-                    onClick={() => {
-                      closeMobileNav();
-                      if (id) scrollToSection(id);
-                    }}
-                    className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
-                  >
-                    {label}
-                  </button>
-                ),
-              )}
+              <button
+                type="button"
+                data-ocid="nav.mobile.blog"
+                onClick={() => {
+                  closeMobileNav();
+                  scrollToSection("testimonials");
+                }}
+                className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+              >
+                Blog
+              </button>
+              <p className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Our Services
+              </p>
               <button
                 type="button"
                 data-ocid="nav.mobile.services.careers"
@@ -695,7 +828,7 @@ export default function HomePage({
                   closeMobileNav();
                   setPage("careers");
                 }}
-                className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+                className="w-full rounded-md pl-6 pr-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
               >
                 Careers
               </button>
@@ -706,7 +839,7 @@ export default function HomePage({
                   closeMobileNav();
                   openPackagesCatalog();
                 }}
-                className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+                className="w-full rounded-md pl-6 pr-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
               >
                 Gallery
               </button>
@@ -717,7 +850,7 @@ export default function HomePage({
                   closeMobileNav();
                   setPage("partners");
                 }}
-                className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+                className="w-full rounded-md pl-6 pr-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
               >
                 Our Partner
               </button>
@@ -728,7 +861,7 @@ export default function HomePage({
                   closeMobileNav();
                   setPage("team");
                 }}
-                className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+                className="w-full rounded-md pl-6 pr-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
               >
                 Our Team
               </button>
@@ -740,7 +873,7 @@ export default function HomePage({
                     closeMobileNav();
                     setPage("account");
                   }}
-                  className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+                  className="w-full rounded-md pl-6 pr-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
                 >
                   Account
                 </button>
@@ -753,7 +886,7 @@ export default function HomePage({
                     closeMobileNav();
                     setPage("my-bookings");
                   }}
-                  className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+                  className="w-full rounded-md pl-6 pr-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
                 >
                   My Bookings
                 </button>
@@ -766,12 +899,34 @@ export default function HomePage({
                     closeMobileNav();
                     setPage("admin");
                   }}
-                  className="w-full rounded-md px-3 py-3 text-left text-base font-medium transition-colors hover:bg-muted/80"
+                  className="w-full rounded-md pl-6 pr-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-muted/80"
                   style={{ color: "oklch(var(--brand-coral))" }}
                 >
                   Admin
                 </button>
               )}
+              <button
+                type="button"
+                data-ocid="nav.mobile.about"
+                onClick={() => {
+                  closeMobileNav();
+                  scrollToSection("about");
+                }}
+                className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+              >
+                About
+              </button>
+              <button
+                type="button"
+                data-ocid="nav.mobile.contact"
+                onClick={() => {
+                  closeMobileNav();
+                  scrollToSection("contact");
+                }}
+                className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+              >
+                Contact
+              </button>
             </nav>
             <div className="mt-auto flex flex-col gap-3 border-t border-border px-4 py-4">
               {identity ? (
@@ -846,11 +1001,13 @@ export default function HomePage({
                   <span className="block text-[11px] font-medium text-muted-foreground">
                     When
                   </span>
-                  <input
-                    type="date"
+                  <DatePickerField
                     value={travelDate}
-                    onChange={(e) => setTravelDate(e.target.value)}
-                    className="w-full border-0 p-0 bg-transparent text-sm font-semibold focus:outline-none"
+                    onChange={setTravelDate}
+                    placeholder="Travel date"
+                    fromDate={todayStart}
+                    triggerClassName="border-0 shadow-none h-auto min-h-0 py-0.5 px-0 bg-transparent font-semibold text-sm justify-start w-full text-foreground"
+                    popoverContentClassName="z-[300]"
                   />
                 </div>
               </label>

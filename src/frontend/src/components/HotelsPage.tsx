@@ -1,10 +1,6 @@
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import CatalogBookingCheckoutDialog from "@/components/CatalogBookingCheckoutDialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,18 +17,31 @@ import {
 import { motion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import type { TourPackage } from "../backend";
+import type { CatalogBookingExtras, TourPackage } from "../backend";
+import DatePickerField, {
+  parseIsoDateLocal,
+  toIsoDateLocal,
+} from "./DatePickerField";
 import {
+  firstIsoDateFromTravelField,
+  getListingKind,
+  isWeekendIsoDate,
   packageForHotelsTab,
   packageForVillasPage,
   parseHotelRating,
   stayFullDescriptionText,
+  stayTouchesBookingBlackout,
+  villaCatalogPricePerPersonForStay,
   type TourPackageListing,
 } from "../utils/catalogListing";
 import type { Page } from "../types";
 
 interface Props {
   setPage: (page: Page) => void;
+  /** Which tab is selected when the page opens (e.g. nav “Hotels” vs “Farmhouses & Villas”). */
+  initialTab?: "hotels" | "villas";
+  /** Opens the shared package detail page (admin-backed catalog fields). */
+  openCatalogPackageDetail?: (packageId: bigint) => void;
 }
 
 const HOTELS = [
@@ -89,6 +98,26 @@ const VILLAS = [
   },
 ];
 
+function startOfToday(): Date {
+  const t = new Date();
+  t.setHours(0, 0, 0, 0);
+  return t;
+}
+
+function formatIsoStayLabel(iso: string) {
+  if (!iso) return undefined;
+  return new Date(`${iso}T12:00:00`).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function blackoutDayMatcher(blackouts: string[] | undefined) {
+  const set = new Set((blackouts ?? []).map((x) => String(x).slice(0, 10)));
+  return (d: Date) => set.has(toIsoDateLocal(d));
+}
+
 type HotelDisplay = {
   key: string;
   name: string;
@@ -97,30 +126,47 @@ type HotelDisplay = {
   rating: number;
   /** Guest-facing narrative (hotels only in catalog). */
   about: string;
-  rooms: { type: string; price: number }[];
+  rooms: {
+    type: string;
+    price: number;
+    tierIndex?: number;
+    imageUrl?: string;
+  }[];
+  catalogPackageId?: bigint;
+  bookingBlackoutDates?: string[];
+  propertyYoutubeUrl?: string;
+  propertyMapsUrl?: string;
 };
 
 function tourPackageToHotelDisplay(p: TourPackage): HotelDisplay {
   if (!("private" in p.detail)) {
     throw new Error("Hotel catalog expects private pricing (tiers = room types)");
   }
+  const tl = p as TourPackageListing;
   const pr = p.detail.private.pricing;
   const rooms =
     "multi" in pr
-      ? pr.multi.tiers.map((t) => ({
+      ? pr.multi.tiers.map((t, i) => ({
           type: t.label,
           price: Number(t.pricePerPersonINR),
+          tierIndex: i,
+          imageUrl: String(tl.hotelRoomTierImageUrls?.[i] ?? "").trim(),
         }))
       : [
           {
             type: "Room",
             price: Number(pr.single.pricePerPersonINR),
+            tierIndex: undefined,
+            imageUrl: "",
           },
         ];
-  const tl = p as TourPackageListing;
   const thumb = String(tl.thumbnailUrl ?? "").trim();
   return {
     key: `c-h-${p.id}`,
+    catalogPackageId: p.id,
+    bookingBlackoutDates: tl.bookingBlackoutDates ?? [],
+    propertyYoutubeUrl: String(tl.propertyYoutubeUrl ?? "").trim(),
+    propertyMapsUrl: String(tl.propertyMapsUrl ?? "").trim(),
     name: p.name,
     image: thumb || p.heroImageUrl,
     location: p.shortDescription,
@@ -136,27 +182,40 @@ type VillaDisplay = {
   image: string;
   location: string;
   pricePerPerson: number;
+  pricePerPersonWeekday: number;
+  pricePerPersonWeekend: number;
   weekdayMin: number;
   weekendMin: number;
   /** Long-form copy when set; otherwise amenity chips are used. */
   about: string;
   amenities: string[];
   catalogPackageId?: bigint;
+  bookingBlackoutDates?: string[];
+  propertyYoutubeUrl?: string;
+  propertyMapsUrl?: string;
 };
 
 function tourPackageToVillaDisplay(p: TourPackage): VillaDisplay {
   if (!("private" in p.detail)) {
     throw new Error("Villa catalog entry expects private-style pricing");
   }
+  const tl = p as TourPackageListing;
   const pc = p.detail.private;
   const pr = pc.pricing;
   const ppp =
     "single" in pr
       ? Number(pr.single.pricePerPersonINR)
       : Number(pr.multi.tiers[0]?.pricePerPersonINR ?? 0);
+  const wdEff =
+    Number(tl.villaWeekdayPricePerPersonINR ?? 0) > 0
+      ? Number(tl.villaWeekdayPricePerPersonINR)
+      : ppp;
+  const weEff =
+    Number(tl.villaWeekendPricePerPersonINR ?? 0) > 0
+      ? Number(tl.villaWeekendPricePerPersonINR)
+      : ppp;
   const minG = Number(pc.minGroupSize);
   const maxG = Number(pc.maxGroupSize);
-  const tl = p as TourPackageListing;
   const narrative = stayFullDescriptionText(tl.longDescription);
   const useProse =
     narrative.length > 100 ||
@@ -178,12 +237,17 @@ function tourPackageToVillaDisplay(p: TourPackage): VillaDisplay {
     name: p.name,
     image: img,
     location: p.shortDescription,
-    pricePerPerson: ppp,
+    pricePerPerson: Math.min(wdEff, weEff),
+    pricePerPersonWeekday: wdEff,
+    pricePerPersonWeekend: weEff,
     weekdayMin: minG,
     weekendMin: maxG > minG ? maxG : minG,
     about: useProse ? narrative : "",
     amenities,
     catalogPackageId: p.id,
+    bookingBlackoutDates: tl.bookingBlackoutDates ?? [],
+    propertyYoutubeUrl: String(tl.propertyYoutubeUrl ?? "").trim(),
+    propertyMapsUrl: String(tl.propertyMapsUrl ?? "").trim(),
   };
 }
 
@@ -191,6 +255,7 @@ type BookingTargetHotel = {
   hotel: HotelDisplay;
   roomType: string;
   roomPrice: number;
+  tierIndex?: number;
 };
 type BookingTargetVilla = { row: VillaDisplay };
 
@@ -200,8 +265,15 @@ function isWeekend(dateStr: string): boolean {
   return d.getDay() === 0 || d.getDay() === 6;
 }
 
-export default function HotelsPage({ setPage }: Props) {
+export default function HotelsPage({
+  setPage,
+  initialTab = "hotels",
+  openCatalogPackageDetail,
+}: Props) {
   const { actor } = useActor();
+  const [accommodationTab, setAccommodationTab] = useState<"hotels" | "villas">(
+    initialTab,
+  );
   const [villaCatalogPkgs, setVillaCatalogPkgs] = useState<
     TourPackage[] | null
   >(null);
@@ -215,25 +287,31 @@ export default function HotelsPage({ setPage }: Props) {
     null,
   );
   const [selectedRooms, setSelectedRooms] = useState<
-    Record<string, { type: string; price: number }>
+    Record<
+      string,
+      { type: string; price: number; tierIndex?: number; imageUrl?: string }
+    >
   >({});
   const [hotelForm, setHotelForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
     checkin: "",
     checkout: "",
     rooms: 1,
   });
   const [villaForm, setVillaForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
     checkin: "",
     checkout: "",
     persons: 2,
   });
+  const [villaMealIncluded, setVillaMealIncluded] = useState(true);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!villaBooking) setVillaMealIncluded(true);
+  }, [villaBooking]);
+
+  useEffect(() => {
+    setAccommodationTab(initialTab);
+  }, [initialTab]);
 
   useEffect(() => {
     if (!actor) return;
@@ -277,7 +355,15 @@ export default function HotelsPage({ setPage }: Props) {
         location: h.location,
         rating: h.rating,
         about: h.about,
-        rooms: h.rooms.map((r) => ({ type: r.type, price: r.price })),
+        bookingBlackoutDates: [],
+        propertyYoutubeUrl: "",
+        propertyMapsUrl: "",
+        rooms: h.rooms.map((r) => ({
+          type: r.type,
+          price: r.price,
+          tierIndex: undefined,
+          imageUrl: undefined,
+        })),
       })),
     [],
   );
@@ -300,10 +386,15 @@ export default function HotelsPage({ setPage }: Props) {
         image: v.image,
         location: v.location,
         pricePerPerson: v.pricePerPerson,
+        pricePerPersonWeekday: v.pricePerPerson,
+        pricePerPersonWeekend: v.pricePerPerson,
         weekdayMin: v.weekdayMin,
         weekendMin: v.weekendMin,
         about: v.about,
         amenities: v.amenities,
+        bookingBlackoutDates: [],
+        propertyYoutubeUrl: "",
+        propertyMapsUrl: "",
       })),
     [],
   );
@@ -330,12 +421,56 @@ export default function HotelsPage({ setPage }: Props) {
     : 0;
 
   const villaNights = calcNights(villaForm.checkin, villaForm.checkout);
-  const villaTotal = villaBooking
-    ? villaBooking.row.pricePerPerson *
-      villaForm.persons *
-      Math.max(1, villaNights)
-    : 0;
-  const isCheckInWeekend = isWeekend(villaForm.checkin);
+
+  const villaCatalogPkg = useMemo(() => {
+    if (!villaBooking?.row.catalogPackageId || !villaCatalogPkgs?.length) {
+      return undefined;
+    }
+    return villaCatalogPkgs.find(
+      (p) => p.id === villaBooking.row.catalogPackageId,
+    );
+  }, [villaBooking, villaCatalogPkgs]);
+
+  const villaTotal = useMemo(() => {
+    if (!villaBooking) return 0;
+    const nts = Math.max(1, villaNights);
+    let ppp = villaBooking.row.pricePerPerson;
+    const pkg = villaCatalogPkg;
+    if (pkg && getListingKind(pkg) === "villa" && "private" in pkg.detail) {
+      const travel = `${villaForm.checkin} → ${villaForm.checkout}`;
+      const pr = pkg.detail.private.pricing;
+      const tierIdx = "multi" in pr ? 0 : null;
+      const live = villaCatalogPricePerPersonForStay(
+        pkg,
+        travel,
+        villaMealIncluded,
+        tierIdx,
+      );
+      if (live > 0) ppp = live;
+    } else {
+      const iso = firstIsoDateFromTravelField(villaForm.checkin);
+      const wknd = iso
+        ? isWeekendIsoDate(iso)
+        : isWeekend(villaForm.checkin);
+      ppp = wknd
+        ? villaBooking.row.pricePerPersonWeekend
+        : villaBooking.row.pricePerPersonWeekday;
+    }
+    return ppp * villaForm.persons * nts;
+  }, [
+    villaBooking,
+    villaCatalogPkg,
+    villaNights,
+    villaForm.persons,
+    villaForm.checkin,
+    villaForm.checkout,
+    villaMealIncluded,
+  ]);
+
+  const checkInIso = firstIsoDateFromTravelField(villaForm.checkin);
+  const isCheckInWeekend = checkInIso
+    ? isWeekendIsoDate(checkInIso)
+    : isWeekend(villaForm.checkin);
   const minPersons = villaBooking
     ? isCheckInWeekend
       ? villaBooking.row.weekendMin
@@ -343,41 +478,116 @@ export default function HotelsPage({ setPage }: Props) {
     : 0;
   const belowMin = villaBooking && villaForm.persons < minPersons;
 
-  const handleHotelBook = async () => {
+  const hotelStayPickerOpts = useMemo(() => {
+    if (!hotelBooking) return null;
+    return {
+      today0: startOfToday(),
+      disableBl: blackoutDayMatcher(hotelBooking.hotel.bookingBlackoutDates),
+      checkinMaxD: (() => {
+        const co = parseIsoDateLocal(hotelForm.checkout);
+        return co
+          ? new Date(co.getFullYear(), co.getMonth(), co.getDate() - 1)
+          : undefined;
+      })(),
+      checkoutMinD: (() => {
+        const ci = parseIsoDateLocal(hotelForm.checkin);
+        return ci
+          ? new Date(ci.getFullYear(), ci.getMonth(), ci.getDate() + 1)
+          : undefined;
+      })(),
+    };
+  }, [hotelBooking, hotelForm.checkin, hotelForm.checkout]);
+
+  const villaStayPickerOpts = useMemo(() => {
+    if (!villaBooking) return null;
+    return {
+      today0: startOfToday(),
+      disableBl: blackoutDayMatcher(villaBooking.row.bookingBlackoutDates),
+      checkinMaxD: (() => {
+        const co = parseIsoDateLocal(villaForm.checkout);
+        return co
+          ? new Date(co.getFullYear(), co.getMonth(), co.getDate() - 1)
+          : undefined;
+      })(),
+      checkoutMinD: (() => {
+        const ci = parseIsoDateLocal(villaForm.checkin);
+        return ci
+          ? new Date(ci.getFullYear(), ci.getMonth(), ci.getDate() + 1)
+          : undefined;
+      })(),
+    };
+  }, [villaBooking, villaForm.checkin, villaForm.checkout]);
+
+  const handleHotelBook = async (payload: {
+    customerName: string;
+    customerEmail: string;
+    customerPhone: string;
+  }) => {
     if (!actor) {
       toast.error("Connecting...");
       return;
     }
     if (
-      !hotelForm.name ||
-      !hotelForm.email ||
-      !hotelForm.phone ||
       !hotelForm.checkin ||
       !hotelForm.checkout
     ) {
-      toast.error("Please fill all fields");
+      toast.error("Please select check-in and check-out dates");
       return;
     }
     if (!hotelBooking) return;
+    if (
+      stayTouchesBookingBlackout(
+        hotelForm.checkin,
+        hotelForm.checkout,
+        hotelBooking.hotel.bookingBlackoutDates,
+      )
+    ) {
+      toast.error("Those dates include a blackout. Please pick other nights.");
+      return;
+    }
     setLoading(true);
     try {
-      await actor.createBooking(
-        "Hotel",
-        `${hotelBooking.hotel.name} — ${hotelBooking.roomType}`,
-        hotelForm.name,
-        hotelForm.email,
-        hotelForm.phone,
-        hotelForm.checkin,
-        BigInt(hotelForm.rooms),
-        [],
-        BigInt(hotelTotal),
-      );
+      const catalogPkg =
+        hotelBooking.hotel.catalogPackageId !== undefined
+          ? hotelCatalogPkgs?.find(
+              (p) => p.id === hotelBooking.hotel.catalogPackageId,
+            )
+          : undefined;
+      if (catalogPkg && "private" in catalogPkg.detail) {
+        const pc = catalogPkg.detail.private;
+        const tierOpt =
+          "multi" in pc.pricing && hotelBooking.tierIndex !== undefined
+            ? BigInt(hotelBooking.tierIndex)
+            : undefined;
+        const travel = `${hotelForm.checkin} → ${hotelForm.checkout}`;
+        await actor.createCatalogBooking(
+          catalogPkg.id,
+          undefined,
+          tierOpt,
+          travel,
+          BigInt(hotelForm.rooms),
+          [],
+          payload.customerName,
+          payload.customerEmail,
+          payload.customerPhone,
+          BigInt(hotelTotal),
+        );
+      } else {
+        await actor.createBooking(
+          "Hotel",
+          `${hotelBooking.hotel.name} — ${hotelBooking.roomType}`,
+          payload.customerName,
+          payload.customerEmail,
+          payload.customerPhone,
+          hotelForm.checkin,
+          BigInt(hotelForm.rooms),
+          [],
+          BigInt(hotelTotal),
+        );
+      }
       toast.success("Hotel booking confirmed!");
       setHotelBooking(null);
       setHotelForm({
-        name: "",
-        email: "",
-        phone: "",
         checkin: "",
         checkout: "",
         rooms: 1,
@@ -389,15 +599,16 @@ export default function HotelsPage({ setPage }: Props) {
     }
   };
 
-  const handleVillaBook = async () => {
+  const handleVillaBook = async (payload: {
+    customerName: string;
+    customerEmail: string;
+    customerPhone: string;
+  }) => {
     if (!actor) {
       toast.error("Connecting...");
       return;
     }
     if (
-      !villaForm.name ||
-      !villaForm.email ||
-      !villaForm.phone ||
       !villaForm.checkin ||
       !villaForm.checkout
     ) {
@@ -405,6 +616,16 @@ export default function HotelsPage({ setPage }: Props) {
       return;
     }
     if (!villaBooking) return;
+    if (
+      stayTouchesBookingBlackout(
+        villaForm.checkin,
+        villaForm.checkout,
+        villaBooking.row.bookingBlackoutDates,
+      )
+    ) {
+      toast.error("Those dates include a blackout. Please pick other nights.");
+      return;
+    }
     setLoading(true);
     try {
       const { row } = villaBooking;
@@ -412,6 +633,7 @@ export default function HotelsPage({ setPage }: Props) {
         row.catalogPackageId !== undefined
           ? villaCatalogPkgs?.find((p) => p.id === row.catalogPackageId)
           : undefined;
+      const extras: CatalogBookingExtras = { villaMealIncluded };
       if (catalogPkg && "private" in catalogPkg.detail) {
         const pc = catalogPkg.detail.private;
         const tierOpt =
@@ -423,18 +645,20 @@ export default function HotelsPage({ setPage }: Props) {
           `${villaForm.checkin} → ${villaForm.checkout}`,
           BigInt(villaForm.persons),
           [],
-          villaForm.name,
-          villaForm.email,
-          villaForm.phone,
+          payload.customerName,
+          payload.customerEmail,
+          payload.customerPhone,
           BigInt(villaTotal),
+          undefined,
+          extras,
         );
       } else {
         await actor.createBooking(
           "Villa/Farmhouse",
           row.name,
-          villaForm.name,
-          villaForm.email,
-          villaForm.phone,
+          payload.customerName,
+          payload.customerEmail,
+          payload.customerPhone,
           villaForm.checkin,
           BigInt(villaForm.persons),
           [],
@@ -444,9 +668,6 @@ export default function HotelsPage({ setPage }: Props) {
       toast.success("Villa booking confirmed!");
       setVillaBooking(null);
       setVillaForm({
-        name: "",
-        email: "",
-        phone: "",
         checkin: "",
         checkout: "",
         persons: 2,
@@ -510,7 +731,13 @@ export default function HotelsPage({ setPage }: Props) {
           </h1>
         </motion.div>
 
-        <Tabs defaultValue="hotels" data-ocid="hotels.tab">
+        <Tabs
+          value={accommodationTab}
+          onValueChange={(v) =>
+            setAccommodationTab(v === "villas" ? "villas" : "hotels")
+          }
+          data-ocid="hotels.tab"
+        >
           <TabsList
             className="mb-8"
             style={{ background: "oklch(0.98 0.009 248)" }}
@@ -551,7 +778,22 @@ export default function HotelsPage({ setPage }: Props) {
                       <div className="flex-1 p-6">
                         <div className="flex items-start justify-between mb-4">
                           <div>
-                            <h2 className="font-display font-bold text-2xl mb-1">
+                            <h2
+                              className={`font-display font-bold text-2xl mb-1 ${
+                                hotel.catalogPackageId !== undefined &&
+                                openCatalogPackageDetail
+                                  ? "cursor-pointer hover:underline decoration-[color:oklch(var(--brand-blue))]"
+                                  : ""
+                              }`}
+                              onClick={() => {
+                                if (
+                                  hotel.catalogPackageId !== undefined &&
+                                  openCatalogPackageDetail
+                                ) {
+                                  openCatalogPackageDetail(hotel.catalogPackageId);
+                                }
+                              }}
+                            >
                               {hotel.name}
                             </h2>
                             <p className="text-sm text-muted-foreground">
@@ -571,6 +813,48 @@ export default function HotelsPage({ setPage }: Props) {
                                 {hotel.about}
                               </p>
                             ) : null}
+                            {(hotel.propertyMapsUrl || hotel.propertyYoutubeUrl) ? (
+                              <div className="flex flex-wrap gap-3 mt-3 text-xs font-semibold">
+                                {hotel.propertyMapsUrl ? (
+                                  <a
+                                    href={hotel.propertyMapsUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="underline"
+                                    style={{ color: "oklch(var(--brand-blue))" }}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    Property map
+                                  </a>
+                                ) : null}
+                                {hotel.propertyYoutubeUrl ? (
+                                  <a
+                                    href={hotel.propertyYoutubeUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="underline"
+                                    style={{ color: "oklch(var(--brand-blue))" }}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    YouTube
+                                  </a>
+                                ) : null}
+                              </div>
+                            ) : null}
+                            {hotel.catalogPackageId !== undefined &&
+                            openCatalogPackageDetail ? (
+                              <button
+                                type="button"
+                                className="mt-3 text-sm font-semibold underline text-left"
+                                style={{ color: "oklch(var(--brand-blue))" }}
+                                data-ocid="hotels.hotel.view_details"
+                                onClick={() =>
+                                  openCatalogPackageDetail(hotel.catalogPackageId!)
+                                }
+                              >
+                                View full details →
+                              </button>
+                            ) : null}
                           </div>
                         </div>
                         <div className="mb-4">
@@ -580,7 +864,7 @@ export default function HotelsPage({ setPage }: Props) {
                           <div className="flex flex-wrap gap-3">
                             {hotel.rooms.map((room) => (
                               <button
-                                key={room.type}
+                                key={`${room.type}-${room.tierIndex ?? "x"}`}
                                 type="button"
                                 data-ocid="hotels.room.toggle"
                                 onClick={() =>
@@ -589,21 +873,34 @@ export default function HotelsPage({ setPage }: Props) {
                                     [hotel.name]: {
                                       type: room.type,
                                       price: room.price,
+                                      tierIndex: room.tierIndex,
+                                      imageUrl: room.imageUrl,
                                     },
                                   }))
                                 }
-                                className="rounded-xl px-4 py-3 border text-left transition-all"
+                                className={`rounded-xl px-4 py-3 border text-left transition-all max-w-[11rem] ${
+                                  sel?.type === room.type &&
+                                  (sel?.tierIndex ?? -1) ===
+                                    (room.tierIndex ?? -1)
+                                    ? "select-card-warm-selected"
+                                    : "select-card-warm"
+                                }`}
                                 style={{
                                   borderColor:
-                                    sel?.type === room.type
-                                      ? "oklch(var(--brand-blue) / 0.7)"
-                                      : "oklch(0.26 0.04 228 / 0.5)",
-                                  background:
-                                    sel?.type === room.type
-                                      ? "oklch(0.16 0.04 192 / 0.3)"
-                                      : "oklch(0.15 0.04 228)",
+                                    sel?.type === room.type &&
+                                    (sel?.tierIndex ?? -1) ===
+                                      (room.tierIndex ?? -1)
+                                      ? "oklch(var(--brand-blue) / 0.65)"
+                                      : undefined,
                                 }}
                               >
+                                {room.imageUrl ? (
+                                  <img
+                                    src={room.imageUrl}
+                                    alt=""
+                                    className="w-full h-16 object-cover rounded-md mb-2"
+                                  />
+                                ) : null}
                                 <div className="font-medium text-sm">
                                   {room.type}
                                 </div>
@@ -626,6 +923,7 @@ export default function HotelsPage({ setPage }: Props) {
                               hotel,
                               roomType: sel.type,
                               roomPrice: sel.price,
+                              tierIndex: sel.tierIndex,
                             })
                           }
                           style={{
@@ -683,18 +981,70 @@ export default function HotelsPage({ setPage }: Props) {
                       >
                         ₹{villa.pricePerPerson.toLocaleString("en-IN")}
                       </div>
+                      {villa.pricePerPersonWeekday !==
+                      villa.pricePerPersonWeekend ? (
+                        <div className="text-[11px] text-white/85 mt-0.5 max-w-[14rem]">
+                          Weekday ₹
+                          {villa.pricePerPersonWeekday.toLocaleString("en-IN")}{" "}
+                          · Weekend ₹
+                          {villa.pricePerPersonWeekend.toLocaleString("en-IN")}
+                        </div>
+                      ) : null}
                       <div className="text-xs text-white/70">
                         per person / night
                       </div>
                     </div>
                   </div>
                   <div className="p-5">
-                    <h2 className="font-display font-bold text-xl mb-1">
+                    <h2
+                      className={`font-display font-bold text-xl mb-1 ${
+                        villa.catalogPackageId !== undefined &&
+                        openCatalogPackageDetail
+                          ? "cursor-pointer hover:underline decoration-[color:oklch(var(--brand-blue))]"
+                          : ""
+                      }`}
+                      onClick={() => {
+                        if (
+                          villa.catalogPackageId !== undefined &&
+                          openCatalogPackageDetail
+                        ) {
+                          openCatalogPackageDetail(villa.catalogPackageId);
+                        }
+                      }}
+                    >
                       {villa.name}
                     </h2>
                     <p className="text-sm text-muted-foreground mb-3">
                       {villa.location}
                     </p>
+                    {(villa.propertyMapsUrl || villa.propertyYoutubeUrl) ? (
+                      <div className="flex flex-wrap gap-3 text-xs font-semibold mb-3">
+                        {villa.propertyMapsUrl ? (
+                          <a
+                            href={villa.propertyMapsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline"
+                            style={{ color: "oklch(var(--brand-blue))" }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            Property map
+                          </a>
+                        ) : null}
+                        {villa.propertyYoutubeUrl ? (
+                          <a
+                            href={villa.propertyYoutubeUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline"
+                            style={{ color: "oklch(var(--brand-blue))" }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            YouTube
+                          </a>
+                        ) : null}
+                      </div>
+                    ) : null}
                     {villa.about ? (
                       <p className="text-sm text-muted-foreground leading-relaxed mb-4 whitespace-pre-wrap">
                         {villa.about}
@@ -704,21 +1054,14 @@ export default function HotelsPage({ setPage }: Props) {
                         {villa.amenities.map((a) => (
                           <span
                             key={a}
-                            className="text-xs px-2 py-1 rounded-full"
-                            style={{
-                              background: "oklch(0.22 0.04 228)",
-                              color: "oklch(0.74 0.04 228)",
-                            }}
+                            className="text-xs px-2 py-1 rounded-full chip-airy"
                           >
                             {a}
                           </span>
                         ))}
                       </div>
                     )}
-                    <div
-                      className="rounded-xl p-3 mb-4 text-xs"
-                      style={{ background: "oklch(0.15 0.04 228)" }}
-                    >
+                    <div className="rounded-xl p-3 mb-4 text-xs meta-hint-strip">
                       <div className="flex justify-between mb-1">
                         <span className="flex items-center gap-1 text-muted-foreground">
                           <Users className="w-3 h-3" />
@@ -738,6 +1081,20 @@ export default function HotelsPage({ setPage }: Props) {
                         </span>
                       </div>
                     </div>
+                    {villa.catalogPackageId !== undefined &&
+                    openCatalogPackageDetail ? (
+                      <button
+                        type="button"
+                        className="mb-3 text-sm font-semibold underline text-left w-full"
+                        style={{ color: "oklch(var(--brand-blue))" }}
+                        data-ocid="hotels.villa.view_details"
+                        onClick={() =>
+                          openCatalogPackageDetail(villa.catalogPackageId!)
+                        }
+                      >
+                        View full details →
+                      </button>
+                    ) : null}
                     <Button
                       data-ocid="hotels.villa.primary_button"
                       className="w-full font-bold"
@@ -757,56 +1114,69 @@ export default function HotelsPage({ setPage }: Props) {
         </Tabs>
       </div>
 
-      {/* Hotel Booking Dialog */}
-      <Dialog
-        open={!!hotelBooking}
-        onOpenChange={(o) => !o && setHotelBooking(null)}
-      >
-        <DialogContent
-          data-ocid="hotels.hotel.dialog"
-          className="sm:max-w-md"
-          style={{
-            background: "oklch(0.99 0.006 248)",
-            border: "1px solid oklch(0.88 0.02 248 / 0.6)",
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle className="font-display">
-              {hotelBooking?.hotel.name} —{" "}
-              <span style={{ color: "oklch(var(--brand-blue))" }}>
-                {hotelBooking?.roomType}
-              </span>
-            </DialogTitle>
-          </DialogHeader>
-          {hotelBooking && (
-            <div className="space-y-4 mt-2">
+      {/* Hotel booking checkout */}
+      {hotelBooking && hotelStayPickerOpts ? (
+        <CatalogBookingCheckoutDialog
+          open
+          onOpenChange={(o) => !o && setHotelBooking(null)}
+          productTitle={`${hotelBooking.hotel.name} — ${hotelBooking.roomType}`}
+          categoryLine="Hotel stay"
+          summaryImageUrl={hotelBooking.hotel.image}
+          dateFromLabel={formatIsoStayLabel(hotelForm.checkin)}
+          dateToLabel={formatIsoStayLabel(hotelForm.checkout)}
+          guestsLine={`${hotelForm.rooms} room(s)${hotelNights > 0 ? ` · ${hotelNights} night(s)` : ""}`}
+          extraSummaryRows={[
+            { label: "Location", value: hotelBooking.hotel.location },
+          ]}
+          subtotalINR={hotelTotal}
+          gstPercent={0}
+          loading={loading}
+          submitDisabled={Boolean(
+            hotelForm.checkin &&
+              hotelForm.checkout &&
+              stayTouchesBookingBlackout(
+                hotelForm.checkin,
+                hotelForm.checkout,
+                hotelBooking.hotel.bookingBlackoutDates,
+              ),
+          )}
+          formTop={
+            <>
               <div className="grid grid-cols-2 gap-3">
-                <div>
+                <div data-ocid="hotels.hotel.input">
                   <Label className="text-xs text-muted-foreground mb-1.5 block">
                     Check-in
                   </Label>
-                  <Input
-                    data-ocid="hotels.hotel.input"
-                    type="date"
+                  <DatePickerField
                     value={hotelForm.checkin}
-                    onChange={(e) =>
-                      setHotelForm((f) => ({ ...f, checkin: e.target.value }))
+                    onChange={(v) =>
+                      setHotelForm((f) => ({
+                        ...f,
+                        checkin: v,
+                        checkout:
+                          f.checkout && v && f.checkout <= v ? "" : f.checkout,
+                      }))
                     }
-                    className="bg-muted/70 border-border"
+                    placeholder="Check-in"
+                    fromDate={hotelStayPickerOpts.today0}
+                    toDate={hotelStayPickerOpts.checkinMaxD}
+                    disableDate={hotelStayPickerOpts.disableBl}
+                    triggerClassName="bg-muted/70 border-border"
                   />
                 </div>
-                <div>
+                <div data-ocid="hotels.hotel.input">
                   <Label className="text-xs text-muted-foreground mb-1.5 block">
                     Check-out
                   </Label>
-                  <Input
-                    data-ocid="hotels.hotel.input"
-                    type="date"
+                  <DatePickerField
                     value={hotelForm.checkout}
-                    onChange={(e) =>
-                      setHotelForm((f) => ({ ...f, checkout: e.target.value }))
+                    onChange={(v) =>
+                      setHotelForm((f) => ({ ...f, checkout: v }))
                     }
-                    className="bg-muted/70 border-border"
+                    placeholder="Check-out"
+                    fromDate={hotelStayPickerOpts.checkoutMinD}
+                    disableDate={hotelStayPickerOpts.disableBl}
+                    triggerClassName="bg-muted/70 border-border"
                   />
                 </div>
               </div>
@@ -829,11 +1199,31 @@ export default function HotelsPage({ setPage }: Props) {
                   className="bg-muted/70 border-border"
                 />
               </div>
-              {hotelNights > 0 && (
+              {hotelForm.checkin &&
+              hotelForm.checkout &&
+              stayTouchesBookingBlackout(
+                hotelForm.checkin,
+                hotelForm.checkout,
+                hotelBooking.hotel.bookingBlackoutDates,
+              ) ? (
                 <div
-                  className="rounded-xl p-3 text-sm"
-                  style={{ background: "oklch(0.13 0.036 228)" }}
+                  className="flex items-start gap-2 rounded-xl p-3 text-sm"
+                  style={{
+                    background: "oklch(0.18 0.06 55 / 0.3)",
+                    border: "1px solid oklch(0.55 0.11 36 / 0.4)",
+                  }}
                 >
+                  <AlertTriangle
+                    className="w-4 h-4 mt-0.5 shrink-0"
+                    style={{ color: "oklch(var(--brand-coral))" }}
+                  />
+                  <span style={{ color: "oklch(0.8 0.1 55)" }}>
+                    Selected nights include a blackout for this property.
+                  </span>
+                </div>
+              ) : null}
+              {hotelNights > 0 ? (
+                <div className="rounded-xl p-3 text-sm meta-hint-strip">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">
                       {hotelNights} night{hotelNights > 1 ? "s" : ""} ×{" "}
@@ -842,7 +1232,7 @@ export default function HotelsPage({ setPage }: Props) {
                     </span>
                   </div>
                   <div className="flex justify-between mt-1">
-                    <span className="font-semibold">Total</span>
+                    <span className="font-semibold">Stay total</span>
                     <span
                       className="font-bold"
                       style={{ color: "oklch(var(--brand-blue))" }}
@@ -851,125 +1241,76 @@ export default function HotelsPage({ setPage }: Props) {
                     </span>
                   </div>
                 </div>
-              )}
-              <div className="space-y-3">
-                <div>
-                  <Label className="text-xs text-muted-foreground mb-1.5 block">
-                    Full Name
-                  </Label>
-                  <Input
-                    data-ocid="hotels.hotel.input"
-                    placeholder="Ravi Kumar"
-                    value={hotelForm.name}
-                    onChange={(e) =>
-                      setHotelForm((f) => ({ ...f, name: e.target.value }))
-                    }
-                    className="bg-muted/70 border-border"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground mb-1.5 block">
-                    Email
-                  </Label>
-                  <Input
-                    data-ocid="hotels.hotel.input"
-                    type="email"
-                    placeholder="ravi@email.com"
-                    value={hotelForm.email}
-                    onChange={(e) =>
-                      setHotelForm((f) => ({ ...f, email: e.target.value }))
-                    }
-                    className="bg-muted/70 border-border"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground mb-1.5 block">
-                    Phone
-                  </Label>
-                  <Input
-                    data-ocid="hotels.hotel.input"
-                    placeholder="+91 9876543210"
-                    value={hotelForm.phone}
-                    onChange={(e) =>
-                      setHotelForm((f) => ({ ...f, phone: e.target.value }))
-                    }
-                    className="bg-muted/70 border-border"
-                  />
-                </div>
-              </div>
-              <Button
-                data-ocid="hotels.hotel.submit_button"
-                onClick={handleHotelBook}
-                disabled={loading}
-                className="w-full font-bold"
-                style={{
-                  background: "oklch(var(--brand-blue))",
-                  color: "oklch(0.985 0.005 85)",
-                }}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  "Confirm Booking"
-                )}
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+              ) : null}
+            </>
+          }
+          onSubmit={(p) => void handleHotelBook(p)}
+        />
+      ) : null}
 
-      {/* Villa Booking Dialog */}
-      <Dialog
-        open={!!villaBooking}
-        onOpenChange={(o) => !o && setVillaBooking(null)}
-      >
-        <DialogContent
-          data-ocid="hotels.villa.dialog"
-          className="sm:max-w-md"
-          style={{
-            background: "oklch(0.99 0.006 248)",
-            border: "1px solid oklch(0.88 0.02 248 / 0.6)",
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle className="font-display">
-              <span style={{ color: "oklch(var(--brand-blue))" }}>
-                {villaBooking?.row.name}
-              </span>
-            </DialogTitle>
-          </DialogHeader>
-          {villaBooking && (
-            <div className="space-y-4 mt-2">
+      {villaBooking && villaStayPickerOpts ? (
+        <CatalogBookingCheckoutDialog
+          open
+          onOpenChange={(o) => !o && setVillaBooking(null)}
+          productTitle={villaBooking.row.name}
+          categoryLine="Villa / farmhouse"
+          summaryImageUrl={villaBooking.row.image}
+          dateFromLabel={formatIsoStayLabel(villaForm.checkin)}
+          dateToLabel={formatIsoStayLabel(villaForm.checkout)}
+          guestsLine={`${villaForm.persons} person${villaForm.persons > 1 ? "s" : ""}${villaNights > 0 ? ` · ${villaNights} night(s)` : ""}`}
+          extraSummaryRows={[
+            { label: "Location", value: villaBooking.row.location },
+          ]}
+          subtotalINR={villaTotal}
+          gstPercent={0}
+          loading={loading}
+          extraGuestSlots={Math.max(0, villaForm.persons - 1)}
+          submitDisabled={Boolean(
+            villaForm.checkin &&
+              villaForm.checkout &&
+              stayTouchesBookingBlackout(
+                villaForm.checkin,
+                villaForm.checkout,
+                villaBooking.row.bookingBlackoutDates,
+              ),
+          )}
+          formTop={
+            <>
               <div className="grid grid-cols-2 gap-3">
-                <div>
+                <div data-ocid="hotels.villa.input">
                   <Label className="text-xs text-muted-foreground mb-1.5 block">
                     Check-in
                   </Label>
-                  <Input
-                    data-ocid="hotels.villa.input"
-                    type="date"
+                  <DatePickerField
                     value={villaForm.checkin}
-                    onChange={(e) =>
-                      setVillaForm((f) => ({ ...f, checkin: e.target.value }))
+                    onChange={(v) =>
+                      setVillaForm((f) => ({
+                        ...f,
+                        checkin: v,
+                        checkout:
+                          f.checkout && v && f.checkout <= v ? "" : f.checkout,
+                      }))
                     }
-                    className="bg-muted/70 border-border"
+                    placeholder="Check-in"
+                    fromDate={villaStayPickerOpts.today0}
+                    toDate={villaStayPickerOpts.checkinMaxD}
+                    disableDate={villaStayPickerOpts.disableBl}
+                    triggerClassName="bg-muted/70 border-border"
                   />
                 </div>
-                <div>
+                <div data-ocid="hotels.villa.input">
                   <Label className="text-xs text-muted-foreground mb-1.5 block">
                     Check-out
                   </Label>
-                  <Input
-                    data-ocid="hotels.villa.input"
-                    type="date"
+                  <DatePickerField
                     value={villaForm.checkout}
-                    onChange={(e) =>
-                      setVillaForm((f) => ({ ...f, checkout: e.target.value }))
+                    onChange={(v) =>
+                      setVillaForm((f) => ({ ...f, checkout: v }))
                     }
-                    className="bg-muted/70 border-border"
+                    placeholder="Check-out"
+                    fromDate={villaStayPickerOpts.checkoutMinD}
+                    disableDate={villaStayPickerOpts.disableBl}
+                    triggerClassName="bg-muted/70 border-border"
                   />
                 </div>
               </div>
@@ -994,7 +1335,42 @@ export default function HotelsPage({ setPage }: Props) {
                   className="bg-muted/70 border-border"
                 />
               </div>
-              {belowMin && (
+              {villaCatalogPkg &&
+              getListingKind(villaCatalogPkg) === "villa" ? (
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <Checkbox
+                    checked={villaMealIncluded}
+                    onCheckedChange={(c) =>
+                      setVillaMealIncluded(Boolean(c))
+                    }
+                  />
+                  <span>Include meals (published villa meal rates)</span>
+                </label>
+              ) : null}
+              {villaForm.checkin &&
+              villaForm.checkout &&
+              stayTouchesBookingBlackout(
+                villaForm.checkin,
+                villaForm.checkout,
+                villaBooking.row.bookingBlackoutDates,
+              ) ? (
+                <div
+                  className="flex items-start gap-2 rounded-xl p-3 text-sm"
+                  style={{
+                    background: "oklch(0.18 0.06 55 / 0.3)",
+                    border: "1px solid oklch(0.55 0.11 36 / 0.4)",
+                  }}
+                >
+                  <AlertTriangle
+                    className="w-4 h-4 mt-0.5 shrink-0"
+                    style={{ color: "oklch(var(--brand-coral))" }}
+                  />
+                  <span style={{ color: "oklch(0.8 0.1 55)" }}>
+                    Selected nights include a blackout for this stay.
+                  </span>
+                </div>
+              ) : null}
+              {belowMin ? (
                 <div
                   data-ocid="hotels.villa.error_state"
                   className="flex items-start gap-2 rounded-xl p-3 text-sm"
@@ -1013,23 +1389,24 @@ export default function HotelsPage({ setPage }: Props) {
                     with our team.
                   </span>
                 </div>
-              )}
-              {villaNights > 0 && (
-                <div
-                  className="rounded-xl p-3 text-sm"
-                  style={{ background: "oklch(0.13 0.036 228)" }}
-                >
+              ) : null}
+              {villaNights > 0 ? (
+                <div className="rounded-xl p-3 text-sm meta-hint-strip">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">
                       {villaForm.persons} persons × {villaNights} night
                       {villaNights > 1 ? "s" : ""} × ₹
-                      {villaBooking.row.pricePerPerson.toLocaleString(
-                        "en-IN",
-                      )}
+                      {Math.round(
+                        villaTotal /
+                          Math.max(
+                            1,
+                            villaForm.persons * Math.max(1, villaNights),
+                          ),
+                      ).toLocaleString("en-IN")}
                     </span>
                   </div>
                   <div className="flex justify-between mt-1">
-                    <span className="font-semibold">Total</span>
+                    <span className="font-semibold">Stay total</span>
                     <span
                       className="font-bold"
                       style={{ color: "oklch(var(--brand-blue))" }}
@@ -1038,75 +1415,12 @@ export default function HotelsPage({ setPage }: Props) {
                     </span>
                   </div>
                 </div>
-              )}
-              <div className="space-y-3">
-                <div>
-                  <Label className="text-xs text-muted-foreground mb-1.5 block">
-                    Full Name
-                  </Label>
-                  <Input
-                    data-ocid="hotels.villa.input"
-                    placeholder="Ravi Kumar"
-                    value={villaForm.name}
-                    onChange={(e) =>
-                      setVillaForm((f) => ({ ...f, name: e.target.value }))
-                    }
-                    className="bg-muted/70 border-border"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground mb-1.5 block">
-                    Email
-                  </Label>
-                  <Input
-                    data-ocid="hotels.villa.input"
-                    type="email"
-                    placeholder="ravi@email.com"
-                    value={villaForm.email}
-                    onChange={(e) =>
-                      setVillaForm((f) => ({ ...f, email: e.target.value }))
-                    }
-                    className="bg-muted/70 border-border"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground mb-1.5 block">
-                    Phone
-                  </Label>
-                  <Input
-                    data-ocid="hotels.villa.input"
-                    placeholder="+91 9876543210"
-                    value={villaForm.phone}
-                    onChange={(e) =>
-                      setVillaForm((f) => ({ ...f, phone: e.target.value }))
-                    }
-                    className="bg-muted/70 border-border"
-                  />
-                </div>
-              </div>
-              <Button
-                data-ocid="hotels.villa.submit_button"
-                onClick={handleVillaBook}
-                disabled={loading}
-                className="w-full font-bold"
-                style={{
-                  background: "oklch(var(--brand-blue))",
-                  color: "oklch(0.985 0.005 85)",
-                }}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  "Confirm Booking"
-                )}
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+              ) : null}
+            </>
+          }
+          onSubmit={(p) => void handleVillaBook(p)}
+        />
+      ) : null}
 
       <footer className="text-center py-8 mt-16 text-xs text-muted-foreground border-t border-border">
         <Mountain className="w-4 h-4 inline mr-1" />

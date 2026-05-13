@@ -5,7 +5,10 @@ import { motion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 import type { CategoryView } from "../backend";
 import type { PackageSearchFilters, Page } from "../types";
-import type { TourPackageListing } from "../utils/catalogListing";
+import {
+  getListingKind,
+  type TourPackageListing,
+} from "../utils/catalogListing";
 import {
   flattenCatalogViews,
   packagePriceHint,
@@ -112,15 +115,22 @@ export default function PackagesBrowsePage({
   const grouped = useMemo(() => {
     if (!views) return [];
     const flat = flattenCatalogViews(views);
+    const kinds = initialFilters?.catalogKinds;
+    const flatFiltered =
+      kinds && kinds.length > 0
+        ? flat.filter(({ pkg }) =>
+            kinds.includes(getListingKind(pkg)),
+          )
+        : flat;
     const map = new Map<string, typeof flat>();
-    for (const row of flat) {
+    for (const row of flatFiltered) {
       const k = row.categoryName;
       const arr = map.get(k) ?? [];
       arr.push(row);
       map.set(k, arr);
     }
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
-  }, [views]);
+  }, [views, initialFilters?.catalogKinds]);
 
   const filteredGrouped = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -219,8 +229,18 @@ export default function PackagesBrowsePage({
           </button>
           <div className="h-5 w-px bg-border" />
           <span className="font-display font-bold text-lg tracking-tight">
-            Packages{" "}
-            <span style={{ color: "oklch(var(--brand-blue))" }}>&amp; tours</span>
+            {initialFilters?.catalogKinds?.length === 2 &&
+            initialFilters.catalogKinds.includes("fixed") &&
+            initialFilters.catalogKinds.includes("trek")
+              ? "Group packages"
+              : "Packages"}{" "}
+            <span style={{ color: "oklch(var(--brand-blue))" }}>
+              {initialFilters?.catalogKinds?.length === 2 &&
+              initialFilters.catalogKinds.includes("fixed") &&
+              initialFilters.catalogKinds.includes("trek")
+                ? "& departures"
+                : "& tours"}
+            </span>
           </span>
         </div>
       </header>
@@ -239,13 +259,30 @@ export default function PackagesBrowsePage({
             Explore
           </p>
           <h1 className="font-display text-4xl md:text-6xl font-black text-foreground mb-4">
-            All packages
-            <br />
-            <span style={{ color: "oklch(var(--brand-coral))" }}>in one place</span>
+            {initialFilters?.catalogKinds?.length === 2 &&
+            initialFilters.catalogKinds.includes("fixed") &&
+            initialFilters.catalogKinds.includes("trek") ? (
+              <>
+                Group packages
+                <br />
+                <span style={{ color: "oklch(var(--brand-coral))" }}>
+                  &amp; fixed departures
+                </span>
+              </>
+            ) : (
+              <>
+                All packages
+                <br />
+                <span style={{ color: "oklch(var(--brand-coral))" }}>in one place</span>
+              </>
+            )}
           </h1>
           <p className="text-muted-foreground text-lg max-w-2xl">
-            Browse everything we offer. Pick a trip, configure dates, group size,
-            and add-ons on the next screen — the same flow for every package.
+            {initialFilters?.catalogKinds?.length === 2 &&
+            initialFilters.catalogKinds.includes("fixed") &&
+            initialFilters.catalogKinds.includes("trek")
+              ? "Scheduled treks and fixed-date group trips. Pick a departure and book your seat."
+              : "Browse everything we offer. Pick a trip, configure dates, group size, and add-ons on the next screen — the same flow for every package."}
           </p>
           {(initialFilters?.destination ||
             initialFilters?.date ||

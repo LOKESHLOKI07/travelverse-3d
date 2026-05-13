@@ -6,9 +6,10 @@
   },
   "scripts": {
     "start": "node src/nodejs-backend/src/index.mjs",
-    "dev": "npx --yes pnpm@9 --filter travelverse-3d-frontend run dev",
+    "dev": "npx --yes concurrently -k -n api,web -c blue,green \"pnpm dev:api\" \"pnpm dev:web\"",
+    "dev:web": "npx --yes pnpm@9 --filter travelverse-3d-frontend run dev",
     "dev:api": "npx --yes pnpm@9 --filter tourist-node-api run dev",
-    "server": "npx --yes pnpm@9 --filter travelverse-3d-frontend run dev",
+    "server": "pnpm dev:web",
     "sync-assets": "node scripts/sync-frontend-public-assets.js",
     "sync-backend-candid": "node scripts/sync-backend-candid.mjs",
     "fonts:decode": "node scripts/decode-base64-fonts.js",

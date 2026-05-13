@@ -139,6 +139,16 @@ export enum UserRole {
     user = "user",
     guest = "guest"
 }
+export type PrivatePartyBookingBreakdown = {
+    adults: number;
+    childrenUnder6: number;
+    children6To10: number;
+    children11Plus: number;
+};
+export type CatalogBookingExtras = {
+    /** When false, villa no-meal INR overrides apply on Node catalog booking. */
+    villaMealIncluded?: boolean;
+};
 export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
@@ -154,6 +164,8 @@ export interface backendInterface {
         customerEmail: string,
         customerPhone: string,
         claimedTotalPriceINR: bigint,
+        privatePartyBreakdown?: PrivatePartyBookingBreakdown,
+        catalogExtras?: CatalogBookingExtras,
     ): Promise<bigint>;
     listCatalog(): Promise<Array<_CategoryView>>;
     getPackage(packageId: bigint): Promise<_TourPackage | null>;
@@ -350,6 +362,8 @@ export class Backend implements backendInterface {
         customerEmail: string,
         customerPhone: string,
         claimedTotalPriceINR: bigint,
+        _privatePartyBreakdown?: PrivatePartyBookingBreakdown,
+        _catalogExtras?: CatalogBookingExtras,
     ): Promise<bigint> {
         const run = () =>
             this.actor.createCatalogBooking(

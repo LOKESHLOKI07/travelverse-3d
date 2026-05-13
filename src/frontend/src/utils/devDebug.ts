@@ -33,7 +33,7 @@ export function installDevDebug(): void {
   console.info(
     "%c[TravelVerse]",
     "color:#22d3ee;font-weight:bold",
-    "dev debug on — <img> audits run after paint (Strict Mode–safe). Fonts: Plus Jakarta Sans & Bricolage Grotesque (Google Fonts, index.css).",
+    "dev debug on — <img> audits run after paint (Strict Mode–safe). Fonts: Plus Jakarta Sans & Bricolage Grotesque (self-hosted, index.css).",
   );
 
   const schedule = () => {

@@ -40,8 +40,12 @@ import { viteEnvIsTrue } from "../utils/viteEnv";
 import { debugCatalogClient } from "../utils/catalogDebug";
 import { uploadCatalogImage } from "../utils/catalogImageUpload";
 import {
+  AMENITY_ICON_KEYS,
   type ListingKind,
   getListingKind,
+  listingKindFromCategoryName,
+  isPrivatePartyMatrixConfigured,
+  itineraryPlansFromTourPackage,
   type TourPackageListing,
 } from "../utils/catalogListing";
 
@@ -57,7 +61,25 @@ type BatchRow = {
   remaining: string;
 };
 type AddOnRow = { rowKey: string; id: string; label: string; price: string };
-type ItineraryDayRow = { rowKey: string; text: string };
+type ItineraryDayRow = { rowKey: string; title: string; description: string };
+type GalleryUrlRow = { rowKey: string; url: string };
+type AmenityRow = { rowKey: string; icon: string; label: string };
+
+const SEASON_MONTH_OPTIONS: { value: string; label: string }[] = [
+  { value: "0", label: "—" },
+  { value: "1", label: "Jan" },
+  { value: "2", label: "Feb" },
+  { value: "3", label: "Mar" },
+  { value: "4", label: "Apr" },
+  { value: "5", label: "May" },
+  { value: "6", label: "Jun" },
+  { value: "7", label: "Jul" },
+  { value: "8", label: "Aug" },
+  { value: "9", label: "Sep" },
+  { value: "10", label: "Oct" },
+  { value: "11", label: "Nov" },
+  { value: "12", label: "Dec" },
+];
 
 function newRowKey(): string {
   return globalThis.crypto.randomUUID();
@@ -86,8 +108,13 @@ export default function AdminCatalogPanel() {
 
   const heroFileRef = useRef<HTMLInputElement>(null);
   const thumbFileRef = useRef<HTMLInputElement>(null);
+  const galleryFileRef = useRef<HTMLInputElement>(null);
+  const pendingGalleryRowKeyRef = useRef<string | null>(null);
   const [uploadingHeroImg, setUploadingHeroImg] = useState(false);
   const [uploadingThumbImg, setUploadingThumbImg] = useState(false);
+  const [uploadingGalleryRowKey, setUploadingGalleryRowKey] = useState<
+    string | null
+  >(null);
 
   const handleCatalogImageUpload = useCallback(
     async (
@@ -272,9 +299,57 @@ export default function AdminCatalogPanel() {
     { rowKey: newRowKey(), date: "", total: "10", remaining: "10" },
   ]);
   const [itineraryDays, setItineraryDays] = useState<ItineraryDayRow[]>([
-    { rowKey: newRowKey(), text: "" },
+    { rowKey: newRowKey(), title: "", description: "" },
   ]);
+  /** Extra detail-page photos (Node catalog); hero/thumbnail are always shown first on the site. */
+  const [galleryRows, setGalleryRows] = useState<GalleryUrlRow[]>([]);
+  /** Package ids (strings) shown as “Related” on the public detail page. */
+  const [relatedSelectedIds, setRelatedSelectedIds] = useState<string[]>([]);
+  /** Detail page (Node): long overview, duration/type line, incl/excl, amenities, sidebar, deals. */
+  const [pkgDetailOverview, setPkgDetailOverview] = useState("");
+  const [pkgDurationLabel, setPkgDurationLabel] = useState("");
+  const [pkgTourTypeLabel, setPkgTourTypeLabel] = useState("");
+  const [pkgPackageInclusions, setPkgPackageInclusions] = useState("");
+  const [pkgPackageExclusions, setPkgPackageExclusions] = useState("");
+  const [amenityRows, setAmenityRows] = useState<AmenityRow[]>([]);
+  const [pkgTourMinAge, setPkgTourMinAge] = useState("");
+  const [pkgTourMaxGuestsDisplay, setPkgTourMaxGuestsDisplay] = useState("");
+  const [pkgTourLocation, setPkgTourLocation] = useState("");
+  const [pkgTourLanguages, setPkgTourLanguages] = useState("");
+  const [lastMinuteDealIds, setLastMinuteDealIds] = useState<string[]>([]);
   const [savingPkg, setSavingPkg] = useState(false);
+  /** Node + listingKind private: optional season, meeting, per-pax 2–12 matrix. */
+  const [seasonStartMonth, setSeasonStartMonth] = useState("0");
+  const [seasonEndMonth, setSeasonEndMonth] = useState("0");
+  const [meetingPointLabel, setMeetingPointLabel] = useState("");
+  const [meetingPointMapsUrl, setMeetingPointMapsUrl] = useState("");
+  const [usePrivatePartyMatrix, setUsePrivatePartyMatrix] = useState(false);
+  const [partyMinOnline, setPartyMinOnline] = useState("2");
+  const [partyMaxOnline, setPartyMaxOnline] = useState("12");
+  const [partyMatrixPrices, setPartyMatrixPrices] = useState<string[]>(() =>
+    Array.from({ length: 11 }, () => ""),
+  );
+  const [childFreeMaxAge, setChildFreeMaxAge] = useState("5");
+  const [childHalfMaxAge, setChildHalfMaxAge] = useState("10");
+  const [childFullMinAge, setChildFullMinAge] = useState("11");
+  const [hideItineraryOnDetail, setHideItineraryOnDetail] = useState(false);
+  const [bookingBlackoutText, setBookingBlackoutText] = useState("");
+  const [propertyYoutubeUrl, setPropertyYoutubeUrl] = useState("");
+  const [propertyMapsUrl, setPropertyMapsUrl] = useState("");
+  const [villaWeekdayPrice, setVillaWeekdayPrice] = useState("");
+  const [villaWeekendPrice, setVillaWeekendPrice] = useState("");
+  const [villaWeekdayMax, setVillaWeekdayMax] = useState("");
+  const [villaWeekendMax, setVillaWeekendMax] = useState("");
+  const [villaNoMealWeekday, setVillaNoMealWeekday] = useState("");
+  const [villaNoMealWeekend, setVillaNoMealWeekend] = useState("");
+  const [hotelTierImageUrls, setHotelTierImageUrls] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (listingKind !== "hotel" || priceKind !== "multi") return;
+    setHotelTierImageUrls((prev) =>
+      tiers.map((_, i) => (prev[i] ?? "").trim()),
+    );
+  }, [listingKind, priceKind, tiers.length]);
 
   const openNewPackage = () => {
     setPkgId(0n);
@@ -285,7 +360,11 @@ export default function AdminCatalogPanel() {
     setPkgThumbnail("");
     setPkgLongDesc("");
     setPkgActive(true);
-    setListingKind("private");
+    setListingKind(
+      views[0]
+        ? listingKindFromCategoryName(views[0].category.name)
+        : "private",
+    );
     setPriceKind("multi");
     setMinG("1");
     setMaxG("20");
@@ -301,8 +380,43 @@ export default function AdminCatalogPanel() {
     setFixedInclusions("");
     setPkgLongDesc("");
     setTrekListingMeta("");
-    setItineraryDays([{ rowKey: newRowKey(), text: "" }]);
+    setItineraryDays([{ rowKey: newRowKey(), title: "", description: "" }]);
     setBatches([{ rowKey: newRowKey(), date: "", total: "8", remaining: "8" }]);
+    setGalleryRows([]);
+    setRelatedSelectedIds([]);
+    setPkgDetailOverview("");
+    setPkgDurationLabel("");
+    setPkgTourTypeLabel("");
+    setPkgPackageInclusions("");
+    setPkgPackageExclusions("");
+    setAmenityRows([]);
+    setPkgTourMinAge("");
+    setPkgTourMaxGuestsDisplay("");
+    setPkgTourLocation("");
+    setPkgTourLanguages("");
+    setLastMinuteDealIds([]);
+    setSeasonStartMonth("0");
+    setSeasonEndMonth("0");
+    setMeetingPointLabel("");
+    setMeetingPointMapsUrl("");
+    setUsePrivatePartyMatrix(false);
+    setPartyMinOnline("2");
+    setPartyMaxOnline("12");
+    setPartyMatrixPrices(Array.from({ length: 11 }, () => ""));
+    setChildFreeMaxAge("5");
+    setChildHalfMaxAge("10");
+    setChildFullMinAge("11");
+    setHideItineraryOnDetail(false);
+    setBookingBlackoutText("");
+    setPropertyYoutubeUrl("");
+    setPropertyMapsUrl("");
+    setVillaWeekdayPrice("");
+    setVillaWeekendPrice("");
+    setVillaWeekdayMax("");
+    setVillaWeekendMax("");
+    setVillaNoMealWeekday("");
+    setVillaNoMealWeekend("");
+    setHotelTierImageUrls([]);
     setDlgOpen(true);
   };
 
@@ -353,12 +467,99 @@ export default function AdminCatalogPanel() {
       const tl = tp as TourPackageListing;
       setPkgThumbnail(String(tl.thumbnailUrl ?? ""));
       setPkgActive(tp.active);
-      const lk = getListingKind(tp);
+      const catRow = views.find(
+        (v) => String(v.category.id) === String(tp.categoryId),
+      );
+      const lk = catRow
+        ? listingKindFromCategoryName(catRow.category.name)
+        : getListingKind(tp);
       setListingKind(lk);
       setPkgLongDesc(
         lk === "hotel" || lk === "villa" ? (tl.longDescription ?? "") : "",
       );
       setTrekListingMeta(lk === "trek" ? (tl.longDescription ?? "") : "");
+      const extraGallery = (tl.galleryImageUrls ?? [])
+        .map((u) => String(u ?? "").trim())
+        .filter(Boolean);
+      setGalleryRows(
+        extraGallery.map((url) => ({ rowKey: newRowKey(), url })),
+      );
+      const rel = tl.relatedPackageIds ?? [];
+      setRelatedSelectedIds(
+        rel
+          .map((x) => {
+            try {
+              return String(BigInt(String(x)));
+            } catch {
+              return "";
+            }
+          })
+          .filter(Boolean),
+      );
+      setPkgDetailOverview(String(tl.detailOverview ?? ""));
+      setPkgDurationLabel(String(tl.durationLabel ?? ""));
+      setPkgTourTypeLabel(String(tl.tourTypeLabel ?? ""));
+      setPkgPackageInclusions((tl.packageInclusions ?? []).join("\n"));
+      setPkgPackageExclusions((tl.packageExclusions ?? []).join("\n"));
+      const am = tl.amenities ?? [];
+      setAmenityRows(
+        am.length > 0
+          ? am.map((a) => ({
+              rowKey: newRowKey(),
+              icon: String(a.icon ?? "bed").toLowerCase(),
+              label: String(a.label ?? ""),
+            }))
+          : [],
+      );
+      setPkgTourMinAge(String(tl.tourMinAge ?? ""));
+      setPkgTourMaxGuestsDisplay(String(tl.tourMaxGuestsDisplay ?? ""));
+      setPkgTourLocation(String(tl.tourLocation ?? ""));
+      setPkgTourLanguages(String(tl.tourLanguages ?? ""));
+      const deals = tl.lastMinuteDealPackageIds ?? [];
+      setLastMinuteDealIds(
+        deals
+          .map((x) => {
+            try {
+              return String(BigInt(String(x)));
+            } catch {
+              return "";
+            }
+          })
+          .filter(Boolean),
+      );
+      if (lk === "private") {
+        setSeasonStartMonth(String(tl.seasonStartMonth ?? 0));
+        setSeasonEndMonth(String(tl.seasonEndMonth ?? 0));
+        setUsePrivatePartyMatrix(isPrivatePartyMatrixConfigured(tp));
+        setPartyMinOnline(String(tl.minOnlinePartySize ?? 2));
+        setPartyMaxOnline(String(tl.maxOnlinePartySize ?? 12));
+        setChildFreeMaxAge(String(tl.childFreeMaxAge ?? 5));
+        setChildHalfMaxAge(String(tl.childHalfMaxAge ?? 10));
+        setChildFullMinAge(String(tl.childFullMinAge ?? 11));
+        const nextPrices = Array.from({ length: 11 }, () => "");
+        for (const row of tl.privatePartyPricing ?? []) {
+          const p = Number(row.pax);
+          if (p >= 2 && p <= 12) nextPrices[p - 2] = String(row.pricePerPersonINR ?? "");
+        }
+        setPartyMatrixPrices(nextPrices);
+      } else {
+        setSeasonStartMonth("0");
+        setSeasonEndMonth("0");
+        setUsePrivatePartyMatrix(false);
+        setPartyMinOnline("2");
+        setPartyMaxOnline("12");
+        setPartyMatrixPrices(Array.from({ length: 11 }, () => ""));
+        setChildFreeMaxAge("5");
+        setChildHalfMaxAge("10");
+        setChildFullMinAge("11");
+      }
+      if (lk === "private" || lk === "trek" || lk === "fixed") {
+        setMeetingPointLabel(String(tl.meetingPointLabel ?? ""));
+        setMeetingPointMapsUrl(String(tl.meetingPointMapsUrl ?? ""));
+      } else {
+        setMeetingPointLabel("");
+        setMeetingPointMapsUrl("");
+      }
       if ("private" in tp.detail) {
         setFixedPrice("12500");
         setFixedInclusions("");
@@ -390,17 +591,20 @@ export default function AdminCatalogPanel() {
           })),
         );
         if (lk === "private") {
-          const days = tp.detail.private.itineraryDays ?? [];
+          const plans = itineraryPlansFromTourPackage(tp);
           setItineraryDays(
-            days.length > 0
-              ? days.map((t) => ({
+            plans.length > 0
+              ? plans.map((d) => ({
                   rowKey: newRowKey(),
-                  text: String(t),
+                  title: d.title,
+                  description: d.description,
                 }))
-              : [{ rowKey: newRowKey(), text: "" }],
+              : [{ rowKey: newRowKey(), title: "", description: "" }],
           );
         } else {
-          setItineraryDays([{ rowKey: newRowKey(), text: "" }]);
+          setItineraryDays([
+            { rowKey: newRowKey(), title: "", description: "" },
+          ]);
         }
       } else {
         setPriceKind("multi");
@@ -432,7 +636,51 @@ export default function AdminCatalogPanel() {
         setFixedInclusions(
           (tp.detail.fixed.inclusions ?? []).join("\n"),
         );
-        setItineraryDays([{ rowKey: newRowKey(), text: "" }]);
+        setItineraryDays([{ rowKey: newRowKey(), title: "", description: "" }]);
+      }
+      const tlx = tp as TourPackageListing;
+      setHideItineraryOnDetail(Boolean(tlx.hideItineraryOnDetail));
+      setBookingBlackoutText((tlx.bookingBlackoutDates ?? []).join("\n"));
+      setPropertyYoutubeUrl(String(tlx.propertyYoutubeUrl ?? ""));
+      setPropertyMapsUrl(String(tlx.propertyMapsUrl ?? ""));
+      setVillaWeekdayPrice(
+        tlx.villaWeekdayPricePerPersonINR
+          ? String(tlx.villaWeekdayPricePerPersonINR)
+          : "",
+      );
+      setVillaWeekendPrice(
+        tlx.villaWeekendPricePerPersonINR
+          ? String(tlx.villaWeekendPricePerPersonINR)
+          : "",
+      );
+      setVillaWeekdayMax(
+        tlx.villaWeekdayMaxGuests ? String(tlx.villaWeekdayMaxGuests) : "",
+      );
+      setVillaWeekendMax(
+        tlx.villaWeekendMaxGuests ? String(tlx.villaWeekendMaxGuests) : "",
+      );
+      setVillaNoMealWeekday(
+        tlx.villaWeekdayPriceNoMealINR
+          ? String(tlx.villaWeekdayPriceNoMealINR)
+          : "",
+      );
+      setVillaNoMealWeekend(
+        tlx.villaWeekendPriceNoMealINR
+          ? String(tlx.villaWeekendPriceNoMealINR)
+          : "",
+      );
+      if (
+        "private" in tp.detail &&
+        lk === "hotel" &&
+        "multi" in tp.detail.private.pricing
+      ) {
+        const rawUrls = tlx.hotelRoomTierImageUrls ?? [];
+        const len = tp.detail.private.pricing.multi.tiers.length;
+        setHotelTierImageUrls(
+          Array.from({ length: len }, (_, i) => String(rawUrls[i] ?? "")),
+        );
+      } else {
+        setHotelTierImageUrls([]);
       }
       setDlgOpen(true);
     } catch {
@@ -475,6 +723,9 @@ export default function AdminCatalogPanel() {
       const detailKind: DetailKind =
         listingKind === "fixed" || listingKind === "trek" ? "fixed" : "private";
       let detail: TourPackage["detail"];
+      /** Used for Node `itineraryPlan` payload (private packages only). */
+      let itineraryRowsPrivateForNode: { title: string; description: string }[] =
+        [];
       if (detailKind === "private") {
         const ao = addOns.map((a) => ({
           addOnId: BigInt(a.id),
@@ -492,9 +743,21 @@ export default function AdminCatalogPanel() {
                   })),
                 },
               };
+        const itineraryRowsPrivate = itineraryDays.filter(
+          (r) => r.title.trim() || r.description.trim(),
+        );
+        itineraryRowsPrivateForNode = itineraryRowsPrivate.map((r) => ({
+          title: r.title.trim(),
+          description: r.description.trim(),
+        }));
         const itineraryForSave =
           listingKind === "private"
-            ? itineraryDays.map((r) => r.text.trim()).filter(Boolean)
+            ? itineraryRowsPrivate.map((r) => {
+                const t = r.title.trim();
+                const d = r.description.trim();
+                if (t && d) return `${t}\n\n${d}`;
+                return t || d;
+              })
             : [];
         detail = {
           private: {
@@ -573,19 +836,176 @@ export default function AdminCatalogPanel() {
       const useNodeBackend = viteEnvIsTrue(import.meta.env.VITE_USE_NODE_BACKEND);
       if (useNodeBackend) {
         const thumb = pkgThumbnail.trim();
+        const galleryImageUrls = galleryRows
+          .map((r) => r.url.trim())
+          .filter(Boolean);
+        const relatedPackageIds = relatedSelectedIds
+          .map((s) => Number(s))
+          .filter(
+            (n) =>
+              Number.isFinite(n) &&
+              n > 0 &&
+              String(BigInt(n)) !== String(effectiveId),
+          );
         if (debugCatalogClient()) {
           console.log("[tourist-debug][admin] adminPutPackage payload (Node)", {
             effectiveId: String(effectiveId),
             heroImageUrl: tour.heroImageUrl,
             thumbnailUrl: thumb || "(empty — field omitted in JSON)",
             listingKind,
+            galleryCount: galleryImageUrls.length,
+            relatedCount: relatedPackageIds.length,
           });
         }
+        const packageInclusions = pkgPackageInclusions
+          .split("\n")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        const packageExclusions = pkgPackageExclusions
+          .split("\n")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        const amenities = amenityRows
+          .filter((r) => r.label.trim())
+          .map((r) => ({
+            icon: (r.icon || "bed").toLowerCase(),
+            label: r.label.trim(),
+          }));
+        const lastMinuteDealPackageIds = lastMinuteDealIds
+          .map((s) => Number(s))
+          .filter(
+            (n) =>
+              Number.isFinite(n) &&
+              n > 0 &&
+              String(BigInt(n)) !== String(effectiveId),
+          );
+        const seasonSm = Math.max(0, Math.min(12, parseInt(seasonStartMonth, 10) || 0));
+        const seasonEm = Math.max(0, Math.min(12, parseInt(seasonEndMonth, 10) || 0));
+        const mapsTrim = meetingPointMapsUrl.trim();
+        if (
+          (listingKind === "private" ||
+            listingKind === "trek" ||
+            listingKind === "fixed") &&
+          mapsTrim &&
+          !/^https:\/\//i.test(mapsTrim)
+        ) {
+          toast.error("Meeting / trailhead map link must start with https://");
+          setSavingPkg(false);
+          return;
+        }
+        const mapsProp = propertyMapsUrl.trim();
+        if (
+          (listingKind === "hotel" || listingKind === "villa") &&
+          mapsProp &&
+          !/^https:\/\//i.test(mapsProp)
+        ) {
+          toast.error("Property map link must start with https://");
+          setSavingPkg(false);
+          return;
+        }
+        const ytTrim = propertyYoutubeUrl.trim();
+        if (ytTrim && !/^https:\/\//i.test(ytTrim)) {
+          toast.error("YouTube link must start with https://");
+          setSavingPkg(false);
+          return;
+        }
+        const blackoutParsed = bookingBlackoutText
+          .split(/\r?\n/)
+          .map((s) => s.trim())
+          .filter((s) => /^\d{4}-\d{2}-\d{2}$/.test(s));
+        const commonNodeListingMeta = {
+          hideItineraryOnDetail,
+          bookingBlackoutDates: blackoutParsed,
+          meetingPointLabel: meetingPointLabel.trim(),
+          meetingPointMapsUrl: mapsTrim,
+          propertyYoutubeUrl: propertyYoutubeUrl.trim(),
+          propertyMapsUrl: mapsProp,
+          villaWeekdayPricePerPersonINR: Math.max(
+            0,
+            parseInt(villaWeekdayPrice, 10) || 0,
+          ),
+          villaWeekendPricePerPersonINR: Math.max(
+            0,
+            parseInt(villaWeekendPrice, 10) || 0,
+          ),
+          villaWeekdayMaxGuests: Math.max(0, parseInt(villaWeekdayMax, 10) || 0),
+          villaWeekendMaxGuests: Math.max(0, parseInt(villaWeekendMax, 10) || 0),
+          villaWeekdayPriceNoMealINR: Math.max(
+            0,
+            parseInt(villaNoMealWeekday, 10) || 0,
+          ),
+          villaWeekendPriceNoMealINR: Math.max(
+            0,
+            parseInt(villaNoMealWeekend, 10) || 0,
+          ),
+          ...(listingKind === "hotel" && priceKind === "multi"
+            ? {
+                hotelRoomTierImageUrls: tiers.map((_, i) =>
+                  (hotelTierImageUrls[i] ?? "").trim(),
+                ),
+              }
+            : {}),
+        };
+        let privatePartyPricingOut: { pax: number; pricePerPersonINR: number }[] =
+          [];
+        let minOnlineOut = 2;
+        let maxOnlineOut = 12;
+        if (listingKind === "private") {
+          minOnlineOut = Math.max(1, parseInt(partyMinOnline, 10) || 2);
+          maxOnlineOut = Math.min(
+            50,
+            Math.max(minOnlineOut, parseInt(partyMaxOnline, 10) || 12),
+          );
+          if (usePrivatePartyMatrix) {
+            for (let pax = minOnlineOut; pax <= maxOnlineOut; pax++) {
+              const raw = partyMatrixPrices[pax - 2] ?? "";
+              const price = parseInt(String(raw).replace(/\s/g, ""), 10);
+              if (!Number.isFinite(price) || price <= 0) {
+                toast.error(`Enter a positive INR rate for party size ${pax}`);
+                setSavingPkg(false);
+                return;
+              }
+              privatePartyPricingOut.push({ pax, pricePerPersonINR: price });
+            }
+          }
+        }
+        const cfa = Math.max(0, Math.min(17, parseInt(childFreeMaxAge, 10) || 5));
+        let cha = Math.max(0, Math.min(17, parseInt(childHalfMaxAge, 10) || 10));
+        if (cha < cfa) cha = cfa;
+        let cfi = Math.max(1, Math.min(21, parseInt(childFullMinAge, 10) || 11));
+        if (cfi <= cha) cfi = cha + 1;
         await backend.adminPutPackage({
           ...tour,
           listingKind,
           longDescription: longDescriptionForSave,
           ...(thumb ? { thumbnailUrl: thumb } : {}),
+          galleryImageUrls,
+          relatedPackageIds,
+          detailOverview: pkgDetailOverview.trim(),
+          durationLabel: pkgDurationLabel.trim(),
+          tourTypeLabel: pkgTourTypeLabel.trim(),
+          packageInclusions,
+          packageExclusions,
+          amenities,
+          tourMinAge: pkgTourMinAge.trim(),
+          tourMaxGuestsDisplay: pkgTourMaxGuestsDisplay.trim(),
+          tourLocation: pkgTourLocation.trim(),
+          tourLanguages: pkgTourLanguages.trim(),
+          lastMinuteDealPackageIds,
+          ...commonNodeListingMeta,
+          ...(listingKind === "private"
+            ? {
+                itineraryPlan: itineraryRowsPrivateForNode,
+                seasonStartMonth: seasonSm,
+                seasonEndMonth: seasonEm,
+                minOnlinePartySize: minOnlineOut,
+                maxOnlinePartySize: maxOnlineOut,
+                childFreeMaxAge: cfa,
+                childHalfMaxAge: cha,
+                childFullMinAge: cfi,
+                privatePartyPricing: privatePartyPricingOut,
+              }
+            : {}),
         } as TourPackage);
       } else {
         await backend.adminPutPackage(tour);
@@ -928,7 +1348,7 @@ export default function AdminCatalogPanel() {
 
       <Dialog open={dlgOpen} onOpenChange={setDlgOpen}>
         <DialogContent
-          className="max-h-[90vh] overflow-y-auto sm:max-w-lg"
+          className="max-h-[90vh] overflow-y-auto sm:max-w-3xl"
           style={{
             background: "oklch(0.99 0.006 248)",
             border: "1px solid oklch(0.88 0.02 248 / 0.6)",
@@ -942,7 +1362,16 @@ export default function AdminCatalogPanel() {
           <div className="space-y-4 pt-2">
             <div>
               <Label className="text-xs">Category</Label>
-              <Select value={pkgCatId} onValueChange={setPkgCatId}>
+              <Select
+                value={pkgCatId}
+                onValueChange={(id) => {
+                  setPkgCatId(id);
+                  const row = views.find((v) => String(v.category.id) === id);
+                  setListingKind(
+                    listingKindFromCategoryName(row?.category.name ?? ""),
+                  );
+                }}
+              >
                 <SelectTrigger className="mt-1 bg-muted/70 border-border">
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
@@ -957,6 +1386,12 @@ export default function AdminCatalogPanel() {
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Also sets package type for the site (private, fixed, trek, hotel,
+                villa) from the category name — e.g. &quot;Villas &amp;
+                Farmhouses&quot; → villas. Custom names without those keywords
+                default to private tours.
+              </p>
             </div>
             <div>
               <Label className="text-xs">Name</Label>
@@ -967,11 +1402,12 @@ export default function AdminCatalogPanel() {
               />
             </div>
             <div>
-              <Label className="text-xs">Short description</Label>
+              <Label className="text-xs">Short overview</Label>
               <Input
                 value={pkgDesc}
                 onChange={(e) => setPkgDesc(e.target.value)}
                 className="mt-1 bg-muted/70 border-border"
+                placeholder="One or two lines — listings and detail “Overview”"
               />
             </div>
             <div>
@@ -1061,6 +1497,538 @@ export default function AdminCatalogPanel() {
                 ) : null}
               </div>
             </div>
+            {viteEnvIsTrue(import.meta.env.VITE_USE_NODE_BACKEND) ? (
+              <div>
+                <Label className="text-xs">
+                  Extra gallery photos (optional)
+                </Label>
+                <p className="text-[11px] text-muted-foreground mt-1 mb-2">
+                  Hero and thumbnail are always used first on the public detail
+                  page; add more URLs for a carousel.
+                </p>
+                <input
+                  ref={galleryFileRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    const rowKey = pendingGalleryRowKeyRef.current;
+                    e.target.value = "";
+                    if (!f || !rowKey) return;
+                    void handleCatalogImageUpload(
+                      f,
+                      (url) => {
+                        setGalleryRows((rows) =>
+                          rows.map((r) =>
+                            r.rowKey === rowKey ? { ...r, url } : r,
+                          ),
+                        );
+                        pendingGalleryRowKeyRef.current = null;
+                        setUploadingGalleryRowKey(null);
+                      },
+                      (busy) => {
+                        if (busy) setUploadingGalleryRowKey(rowKey);
+                        else setUploadingGalleryRowKey(null);
+                      },
+                    );
+                  }}
+                />
+                <div className="space-y-2">
+                  {galleryRows.map((row) => (
+                    <div
+                      key={row.rowKey}
+                      className="flex gap-2 items-center flex-wrap"
+                    >
+                      <Input
+                        value={row.url}
+                        onChange={(e) =>
+                          setGalleryRows((rows) =>
+                            rows.map((r) =>
+                              r.rowKey === row.rowKey
+                                ? { ...r, url: e.target.value }
+                                : r,
+                            ),
+                          )
+                        }
+                        className="flex-1 min-w-[12rem] bg-muted/70 border-border"
+                        placeholder="Image URL"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0 border-border bg-muted/70"
+                        disabled={uploadingGalleryRowKey === row.rowKey}
+                        onClick={() => {
+                          pendingGalleryRowKeyRef.current = row.rowKey;
+                          galleryFileRef.current?.click();
+                        }}
+                      >
+                        {uploadingGalleryRowKey === row.rowKey ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          "Upload"
+                        )}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-400 shrink-0"
+                        onClick={() =>
+                          setGalleryRows((rows) =>
+                            rows.filter((r) => r.rowKey !== row.rowKey),
+                          )
+                        }
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-border bg-muted/70"
+                    onClick={() =>
+                      setGalleryRows((rows) => [
+                        ...rows,
+                        { rowKey: newRowKey(), url: "" },
+                      ])
+                    }
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add gallery row
+                  </Button>
+                </div>
+                <div className="pt-2">
+                  <Label className="text-xs">Related packages</Label>
+                  <p className="text-[11px] text-muted-foreground mt-1 mb-2">
+                    Shown on the public package detail page (stored with the Node
+                    catalog API).
+                  </p>
+                  <div className="max-h-52 overflow-y-auto rounded-md border border-border p-3 space-y-2 bg-muted/30">
+                    {flatPackages
+                      .filter(
+                        ({ pkg: p }) =>
+                          !(pkgId !== 0n && packageIdsEqual(p.id, pkgId)),
+                      )
+                      .map(({ pkg: p, categoryName }) => {
+                        const idStr = String(p.id);
+                        const checked = relatedSelectedIds.includes(idStr);
+                        return (
+                          <label
+                            key={idStr}
+                            className="flex items-start gap-2 text-sm cursor-pointer"
+                          >
+                            <Checkbox
+                              className="mt-0.5"
+                              checked={checked}
+                              onCheckedChange={() =>
+                                setRelatedSelectedIds((prev) =>
+                                  checked
+                                    ? prev.filter((x) => x !== idStr)
+                                    : [...prev, idStr],
+                                )
+                              }
+                            />
+                            <span className="leading-snug">
+                              <span className="font-mono text-xs text-muted-foreground">
+                                #{idStr}
+                              </span>{" "}
+                              {p.name}
+                              <span className="text-muted-foreground text-xs block">
+                                {categoryName}
+                              </span>
+                            </span>
+                          </label>
+                        );
+                      })}
+                  </div>
+                </div>
+
+                <div className="pt-4 mt-4 border-t border-border space-y-4">
+                  <div>
+                    <p className="text-sm font-semibold font-display">
+                      Tour detail page content
+                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      Overview, included/excluded, amenities, tour sidebar, and
+                      last-minute deal cards on the public package page.
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Detail overview</Label>
+                    <Textarea
+                      value={pkgDetailOverview}
+                      onChange={(e) => setPkgDetailOverview(e.target.value)}
+                      className="mt-1 bg-muted/70 border-border min-h-[100px]"
+                      placeholder="Long description under “Overview” (leave empty to use Short overview for non-hotel listings)"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs">Duration label</Label>
+                      <Input
+                        value={pkgDurationLabel}
+                        onChange={(e) => setPkgDurationLabel(e.target.value)}
+                        className="mt-1 bg-muted/70 border-border"
+                        placeholder="e.g. 2 Days / 1 Night"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Tour type label</Label>
+                      <Input
+                        value={pkgTourTypeLabel}
+                        onChange={(e) => setPkgTourTypeLabel(e.target.value)}
+                        className="mt-1 bg-muted/70 border-border"
+                        placeholder="e.g. Camping"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs">Included (one per line)</Label>
+                      <Textarea
+                        value={pkgPackageInclusions}
+                        onChange={(e) =>
+                          setPkgPackageInclusions(e.target.value)
+                        }
+                        className="mt-1 bg-muted/70 border-border min-h-[88px]"
+                        placeholder="Overrides fixed-date “inclusions” when non-empty"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Excluded (one per line)</Label>
+                      <Textarea
+                        value={pkgPackageExclusions}
+                        onChange={(e) =>
+                          setPkgPackageExclusions(e.target.value)
+                        }
+                        className="mt-1 bg-muted/70 border-border min-h-[88px]"
+                      />
+                    </div>
+                  </div>
+                {viteEnvIsTrue(import.meta.env.VITE_USE_NODE_BACKEND) ? (
+                  <div className="rounded-lg border border-dashed border-border p-3 space-y-3 bg-muted/10">
+                    <p className="text-xs font-semibold text-muted-foreground">
+                      Node catalog — itinerary, blackouts, maps and media
+                    </p>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <Checkbox
+                        checked={hideItineraryOnDetail}
+                        onCheckedChange={(c) =>
+                          setHideItineraryOnDetail(Boolean(c))
+                        }
+                      />
+                      <span>Hide day-by-day itinerary on the public detail page</span>
+                    </label>
+                    <div>
+                      <Label className="text-xs">
+                        Blackout dates (YYYY-MM-DD, one per line)
+                      </Label>
+                      <Textarea
+                        value={bookingBlackoutText}
+                        onChange={(e) => setBookingBlackoutText(e.target.value)}
+                        rows={3}
+                        className="mt-1 bg-muted/70 border-border text-sm"
+                        placeholder={"2026-12-25\n2026-12-31"}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">YouTube video URL</Label>
+                      <Input
+                        value={propertyYoutubeUrl}
+                        onChange={(e) =>
+                          setPropertyYoutubeUrl(e.target.value)
+                        }
+                        className="mt-1 bg-muted/70 border-border text-sm"
+                        placeholder="https://www.youtube.com/watch?v=…"
+                      />
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        Optional promo or walkthrough; treks and hotels/villas
+                        can surface this on listing pages when set (https only).
+                      </p>
+                    </div>
+                    {(listingKind === "hotel" || listingKind === "villa") && (
+                      <div>
+                        <Label className="text-xs">
+                          Property Google Maps URL (https)
+                        </Label>
+                        <Input
+                          value={propertyMapsUrl}
+                          onChange={(e) => setPropertyMapsUrl(e.target.value)}
+                          className="mt-1 bg-muted/70 border-border text-sm"
+                          placeholder="https://maps.google.com/…"
+                        />
+                      </div>
+                    )}
+                    {listingKind === "villa" ? (
+                      <div className="grid sm:grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs">Weekday price / person (INR)</Label>
+                          <Input
+                            value={villaWeekdayPrice}
+                            onChange={(e) =>
+                              setVillaWeekdayPrice(e.target.value)
+                            }
+                            className="mt-1 bg-muted/70 border-border text-sm"
+                            placeholder="Overrides catalog tier when set"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Weekend price / person (INR)</Label>
+                          <Input
+                            value={villaWeekendPrice}
+                            onChange={(e) =>
+                              setVillaWeekendPrice(e.target.value)
+                            }
+                            className="mt-1 bg-muted/70 border-border text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Weekday max guests (0 = use max group)</Label>
+                          <Input
+                            value={villaWeekdayMax}
+                            onChange={(e) => setVillaWeekdayMax(e.target.value)}
+                            className="mt-1 bg-muted/70 border-border text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Weekend max guests (0 = use max group)</Label>
+                          <Input
+                            value={villaWeekendMax}
+                            onChange={(e) => setVillaWeekendMax(e.target.value)}
+                            className="mt-1 bg-muted/70 border-border text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Weekday without meals / person</Label>
+                          <Input
+                            value={villaNoMealWeekday}
+                            onChange={(e) =>
+                              setVillaNoMealWeekday(e.target.value)
+                            }
+                            className="mt-1 bg-muted/70 border-border text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Weekend without meals / person</Label>
+                          <Input
+                            value={villaNoMealWeekend}
+                            onChange={(e) =>
+                              setVillaNoMealWeekend(e.target.value)
+                            }
+                            className="mt-1 bg-muted/70 border-border text-sm"
+                          />
+                        </div>
+                      </div>
+                    ) : null}
+                    {listingKind === "hotel" && priceKind === "multi" ? (
+                      <div className="space-y-2">
+                        <p className="text-[11px] text-muted-foreground">
+                          Optional image URL per room tier (same order as tiers
+                          below).
+                        </p>
+                        {tiers.map((t, i) => (
+                          <div key={`img-${t.rowKey}`}>
+                            <Label className="text-[11px] text-muted-foreground">
+                              Photo URL — {t.label || `Tier ${i + 1}`}
+                            </Label>
+                            <Input
+                              value={hotelTierImageUrls[i] ?? ""}
+                              onChange={(e) => {
+                                const next = [...hotelTierImageUrls];
+                                next[i] = e.target.value;
+                                setHotelTierImageUrls(next);
+                              }}
+                              className="mt-1 bg-muted/70 border-border text-sm"
+                              placeholder="https://…"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+                  <div>
+                    <Label className="text-xs">Tour amenities</Label>
+                    <p className="text-[11px] text-muted-foreground mt-1 mb-2">
+                      Icon + label pairs shown in the amenities list.
+                    </p>
+                    <div className="space-y-2">
+                      {amenityRows.map((row) => (
+                        <div
+                          key={row.rowKey}
+                          className="flex flex-wrap gap-2 items-center"
+                        >
+                          <Select
+                            value={
+                              AMENITY_ICON_KEYS.includes(
+                                row.icon as (typeof AMENITY_ICON_KEYS)[number],
+                              )
+                                ? row.icon
+                                : "bed"
+                            }
+                            onValueChange={(v) =>
+                              setAmenityRows((rows) =>
+                                rows.map((r) =>
+                                  r.rowKey === row.rowKey
+                                    ? { ...r, icon: v }
+                                    : r,
+                                ),
+                              )
+                            }
+                          >
+                            <SelectTrigger className="w-[9.5rem] bg-muted/70 border-border">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {AMENITY_ICON_KEYS.map((k) => (
+                                <SelectItem key={k} value={k}>
+                                  {k}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            value={row.label}
+                            onChange={(e) =>
+                              setAmenityRows((rows) =>
+                                rows.map((r) =>
+                                  r.rowKey === row.rowKey
+                                    ? { ...r, label: e.target.value }
+                                    : r,
+                                ),
+                              )
+                            }
+                            className="flex-1 min-w-[10rem] bg-muted/70 border-border"
+                            placeholder="Label"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-400 shrink-0"
+                            onClick={() =>
+                              setAmenityRows((rows) =>
+                                rows.filter((r) => r.rowKey !== row.rowKey),
+                              )
+                            }
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="border-border bg-muted/70"
+                        onClick={() =>
+                          setAmenityRows((rows) => [
+                            ...rows,
+                            {
+                              rowKey: newRowKey(),
+                              icon: "bed",
+                              label: "",
+                            },
+                          ])
+                        }
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add amenity
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs">Min age (display)</Label>
+                      <Input
+                        value={pkgTourMinAge}
+                        onChange={(e) => setPkgTourMinAge(e.target.value)}
+                        className="mt-1 bg-muted/70 border-border"
+                        placeholder="e.g. 8+"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Max guests (display)</Label>
+                      <Input
+                        value={pkgTourMaxGuestsDisplay}
+                        onChange={(e) =>
+                          setPkgTourMaxGuestsDisplay(e.target.value)
+                        }
+                        className="mt-1 bg-muted/70 border-border"
+                        placeholder="e.g. 40"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Tour location</Label>
+                      <Input
+                        value={pkgTourLocation}
+                        onChange={(e) => setPkgTourLocation(e.target.value)}
+                        className="mt-1 bg-muted/70 border-border"
+                        placeholder="e.g. Maharashtra"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Languages</Label>
+                      <Input
+                        value={pkgTourLanguages}
+                        onChange={(e) => setPkgTourLanguages(e.target.value)}
+                        className="mt-1 bg-muted/70 border-border"
+                        placeholder="e.g. English, Hindi"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Last minute deals</Label>
+                    <p className="text-[11px] text-muted-foreground mt-1 mb-2">
+                      Sidebar cards linking to other packages.
+                    </p>
+                    <div className="max-h-52 overflow-y-auto rounded-md border border-border p-3 space-y-2 bg-muted/30">
+                      {flatPackages
+                        .filter(
+                          ({ pkg: p }) =>
+                            !(pkgId !== 0n && packageIdsEqual(p.id, pkgId)),
+                        )
+                        .map(({ pkg: p, categoryName }) => {
+                          const idStr = String(p.id);
+                          const checked = lastMinuteDealIds.includes(idStr);
+                          return (
+                            <label
+                              key={`deal-${idStr}`}
+                              className="flex items-start gap-2 text-sm cursor-pointer"
+                            >
+                              <Checkbox
+                                className="mt-0.5"
+                                checked={checked}
+                                onCheckedChange={() =>
+                                  setLastMinuteDealIds((prev) =>
+                                    checked
+                                      ? prev.filter((x) => x !== idStr)
+                                      : [...prev, idStr],
+                                  )
+                                }
+                              />
+                              <span className="leading-snug">
+                                <span className="font-mono text-xs text-muted-foreground">
+                                  #{idStr}
+                                </span>{" "}
+                                {p.name}
+                                <span className="text-muted-foreground text-xs block">
+                                  {categoryName}
+                                </span>
+                              </span>
+                            </label>
+                          );
+                        })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
             <div className="flex items-center gap-2">
               <Checkbox
                 id="pkg-act"
@@ -1069,29 +2037,6 @@ export default function AdminCatalogPanel() {
               />
               <Label htmlFor="pkg-act">Active (visible on site)</Label>
             </div>
-            <div>
-              <Label className="text-xs">Where it appears on the site</Label>
-              <Select
-                value={listingKind}
-                onValueChange={(v) => setListingKind(v as ListingKind)}
-              >
-                <SelectTrigger className="mt-1 bg-muted/70 border-border">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="private">Private packages</SelectItem>
-                  <SelectItem value="fixed">Fixed date packages</SelectItem>
-                  <SelectItem value="villa">Villas &amp; farmhouses</SelectItem>
-                  <SelectItem value="trek">Treks &amp; expeditions</SelectItem>
-                  <SelectItem value="hotel">Hotels (tiers = room types)</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-[11px] text-muted-foreground mt-1">
-                Fixed date and treks use batches; private, villa, and hotels use
-                group pricing (hotels: each tier = a room type).
-              </p>
-            </div>
-
             {listingKind === "hotel" || listingKind === "villa" ? (
               <div>
                 <Label className="text-xs">Full description (required)</Label>
@@ -1145,7 +2090,16 @@ export default function AdminCatalogPanel() {
                         </p>
                       ) : null}
                       <Input
-                        placeholder="Date label (e.g. Apr 10, 2026)"
+                        type={
+                          viteEnvIsTrue(import.meta.env.VITE_USE_NODE_BACKEND)
+                            ? "date"
+                            : "text"
+                        }
+                        placeholder={
+                          viteEnvIsTrue(import.meta.env.VITE_USE_NODE_BACKEND)
+                            ? "Departure date"
+                            : "Date label (e.g. Apr 10, 2026)"
+                        }
                         value={b.date}
                         onChange={(e) => {
                           const n = [...batches];
@@ -1244,6 +2198,178 @@ export default function AdminCatalogPanel() {
                     />
                   </div>
                 </div>
+                {listingKind === "private" &&
+                viteEnvIsTrue(import.meta.env.VITE_USE_NODE_BACKEND) ? (
+                  <div className="space-y-4 rounded-lg border border-border p-3 bg-muted/15">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      Private tour (Node catalog)
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-xs">Season start</Label>
+                        <Select
+                          value={seasonStartMonth}
+                          onValueChange={setSeasonStartMonth}
+                        >
+                          <SelectTrigger className="mt-1 bg-muted/70 border-border h-9 text-sm">
+                            <SelectValue placeholder="Month" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {SEASON_MONTH_OPTIONS.map((m) => (
+                              <SelectItem key={m.value} value={m.value}>
+                                {m.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Season end</Label>
+                        <Select
+                          value={seasonEndMonth}
+                          onValueChange={setSeasonEndMonth}
+                        >
+                          <SelectTrigger className="mt-1 bg-muted/70 border-border h-9 text-sm">
+                            <SelectValue placeholder="Month" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {SEASON_MONTH_OPTIONS.map((m) => (
+                              <SelectItem key={`e-${m.value}`} value={m.value}>
+                                {m.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Meeting point label</Label>
+                      <Input
+                        value={meetingPointLabel}
+                        onChange={(e) => setMeetingPointLabel(e.target.value)}
+                        className="mt-1 bg-muted/70 border-border text-sm"
+                        placeholder="e.g. Manali bus stand — main gate"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Google Maps URL (https)</Label>
+                      <Input
+                        value={meetingPointMapsUrl}
+                        onChange={(e) => setMeetingPointMapsUrl(e.target.value)}
+                        className="mt-1 bg-muted/70 border-border text-sm"
+                        placeholder="https://maps.google.com/..."
+                      />
+                    </div>
+                    <>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <Checkbox
+                        checked={usePrivatePartyMatrix}
+                        onCheckedChange={(c) =>
+                          setUsePrivatePartyMatrix(Boolean(c))
+                        }
+                      />
+                      <span>
+                        Per–party-size rates for online booking (weighted child
+                        pricing on the site)
+                      </span>
+                    </label>
+                    {usePrivatePartyMatrix ? (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="text-xs">Min online party</Label>
+                            <Input
+                              value={partyMinOnline}
+                              onChange={(e) =>
+                                setPartyMinOnline(e.target.value)
+                              }
+                              className="mt-1 bg-muted/70 border-border"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Max online party</Label>
+                            <Input
+                              value={partyMaxOnline}
+                              onChange={(e) =>
+                                setPartyMaxOnline(e.target.value)
+                              }
+                              className="mt-1 bg-muted/70 border-border"
+                            />
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          Enter INR / person for each total headcount (adults +
+                          all children). Under-6 bucket is free, 6–10 is half
+                          unit, 11+ full unit — age labels use the fields below.
+                        </p>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          <div>
+                            <Label className="text-[11px]">Free through age</Label>
+                            <Input
+                              value={childFreeMaxAge}
+                              onChange={(e) =>
+                                setChildFreeMaxAge(e.target.value)
+                              }
+                              className="mt-1 bg-muted/70 border-border h-8 text-sm"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[11px]">Half rate max age</Label>
+                            <Input
+                              value={childHalfMaxAge}
+                              onChange={(e) =>
+                                setChildHalfMaxAge(e.target.value)
+                              }
+                              className="mt-1 bg-muted/70 border-border h-8 text-sm"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[11px]">Full rate from age</Label>
+                            <Input
+                              value={childFullMinAge}
+                              onChange={(e) =>
+                                setChildFullMinAge(e.target.value)
+                              }
+                              className="mt-1 bg-muted/70 border-border h-8 text-sm"
+                            />
+                          </div>
+                        </div>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-24">Guests</TableHead>
+                              <TableHead>INR / person</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {Array.from({ length: 11 }, (_, i) => i + 2).map(
+                              (pax) => (
+                                <TableRow key={pax}>
+                                  <TableCell className="font-medium text-sm">
+                                    {pax}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Input
+                                      value={partyMatrixPrices[pax - 2] ?? ""}
+                                      onChange={(e) => {
+                                        const next = [...partyMatrixPrices];
+                                        next[pax - 2] = e.target.value;
+                                        setPartyMatrixPrices(next);
+                                      }}
+                                      className="h-8 bg-muted/70 border-border text-sm"
+                                      placeholder="—"
+                                    />
+                                  </TableCell>
+                                </TableRow>
+                              ),
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ) : null}
+                    </>
+                  </div>
+                ) : null}
                 <div>
                   <Label className="text-xs">Pricing</Label>
                   <Select
@@ -1390,30 +2516,55 @@ export default function AdminCatalogPanel() {
             </div>
 
             {listingKind === "private" ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Label className="text-xs">
-                  Day-by-day itinerary (optional)
+                  Day-by-day tour plan (optional)
                 </Label>
                 <p className="text-[11px] text-muted-foreground">
-                  Each block is shown as Day 1, Day 2, … on the private packages
-                  page. Not used for hotels or villas.
+                  Short line = accordion header (e.g. Day 1: Delhi to Shimla).
+                  Long description = details inside the expanded panel. With the
+                  Node API, both are stored; on-chain saves combine them into one
+                  field per day.
                 </p>
                 {itineraryDays.map((row, i) => (
-                  <div key={row.rowKey} className="flex flex-col gap-1">
-                    <span className="text-[11px] text-muted-foreground">
+                  <div
+                    key={row.rowKey}
+                    className="rounded-lg border border-border p-3 space-y-2 bg-muted/20"
+                  >
+                    <span className="text-[11px] font-medium text-muted-foreground">
                       Day {i + 1}
                     </span>
-                    <Textarea
-                      value={row.text}
-                      onChange={(e) => {
-                        const n = [...itineraryDays];
-                        n[i] = { ...n[i]!, text: e.target.value };
-                        setItineraryDays(n);
-                      }}
-                      rows={2}
-                      className="bg-muted/70 border-border text-sm"
-                      placeholder="What happens today — drives, sights, meals, overnight stop…"
-                    />
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground">
+                        Short description (header)
+                      </Label>
+                      <Input
+                        value={row.title}
+                        onChange={(e) => {
+                          const n = [...itineraryDays];
+                          n[i] = { ...n[i]!, title: e.target.value };
+                          setItineraryDays(n);
+                        }}
+                        className="mt-1 bg-muted/70 border-border text-sm"
+                        placeholder="e.g. Day 1: Departure from Delhi to Shimla"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground">
+                        Long description (expanded)
+                      </Label>
+                      <Textarea
+                        value={row.description}
+                        onChange={(e) => {
+                          const n = [...itineraryDays];
+                          n[i] = { ...n[i]!, description: e.target.value };
+                          setItineraryDays(n);
+                        }}
+                        rows={4}
+                        className="mt-1 bg-muted/70 border-border text-sm"
+                        placeholder="Bullets, timings, links, meals — what appears when the day is opened…"
+                      />
+                    </div>
                     <Button
                       type="button"
                       variant="ghost"
@@ -1422,7 +2573,11 @@ export default function AdminCatalogPanel() {
                       onClick={() => {
                         if (itineraryDays.length <= 1) {
                           setItineraryDays([
-                            { rowKey: newRowKey(), text: "" },
+                            {
+                              rowKey: newRowKey(),
+                              title: "",
+                              description: "",
+                            },
                           ]);
                         } else {
                           setItineraryDays(
@@ -1442,7 +2597,7 @@ export default function AdminCatalogPanel() {
                   onClick={() =>
                     setItineraryDays([
                       ...itineraryDays,
-                      { rowKey: newRowKey(), text: "" },
+                      { rowKey: newRowKey(), title: "", description: "" },
                     ])
                   }
                 >

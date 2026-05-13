@@ -44,3 +44,39 @@ export function findPackageById(
   }
   return null;
 }
+
+function idKey(id: unknown): string {
+  try {
+    return String(BigInt(String(id)));
+  } catch {
+    return String(id);
+  }
+}
+
+/**
+ * Resolve related packages by id list (e.g. from `relatedPackageIds`), preserving order.
+ */
+export function findPackagesByIds(
+  views: CategoryView[],
+  ids: Array<number | string | bigint>,
+  opts?: { excludeId?: bigint; onlyActive?: boolean },
+): TourPackage[] {
+  const onlyActive = opts?.onlyActive !== false;
+  const ex =
+    opts?.excludeId !== undefined ? idKey(opts.excludeId) : null;
+  const byId = new Map<string, TourPackage>();
+  for (const v of views) {
+    for (const p of v.packages) {
+      if (onlyActive && !p.active) continue;
+      byId.set(idKey(p.id), p);
+    }
+  }
+  const out: TourPackage[] = [];
+  for (const raw of ids) {
+    const k = idKey(raw);
+    if (ex && k === ex) continue;
+    const p = byId.get(k);
+    if (p) out.push(p);
+  }
+  return out;
+}

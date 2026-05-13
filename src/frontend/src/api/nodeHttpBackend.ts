@@ -3,6 +3,8 @@ import {
   type Booking,
   BookingStatus,
   type CategoryView,
+  type CatalogBookingExtras,
+  type PrivatePartyBookingBreakdown,
   type TourPackage,
   type UserProfile,
   UserRole,
@@ -14,6 +16,29 @@ import {
   snapshotViteBackendMode,
 } from "../utils/adminAccessDebug";
 import { viteEnvIsTrue } from "../utils/viteEnv";
+
+/** Avoid HTTPS page → http://127.0.0.1 / LAN hosts (blocked as mixed / private-network). */
+function coerceNodeApiBaseForBrowserPage(root: string): string {
+  const trimmed = root.replace(/\/$/, "");
+  if (typeof window === "undefined" || window.location.protocol !== "https:") {
+    return trimmed;
+  }
+  const localHttpHost = (hostname: string) =>
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    /^10\./.test(hostname) ||
+    /^192\.168\./.test(hostname) ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname);
+  try {
+    const u = new URL(trimmed, window.location.href);
+    if (u.protocol === "http:" && localHttpHost(u.hostname)) {
+      return "/api-node";
+    }
+  } catch {
+    /* relative base */
+  }
+  return trimmed;
+}
 
 function appAdminTokenForHeaders(): string | undefined {
   const fromHash = getSecretParameter("appAdminToken")?.trim();
@@ -106,7 +131,7 @@ export function createNodeHttpBackend(
   getAdminBearer?: () => string | null,
   getUserBearer?: () => string | null,
 ): backendInterface {
-  const root = baseUrl.replace(/\/$/, "");
+  const root = coerceNodeApiBaseForBrowserPage(baseUrl.replace(/\/$/, ""));
 
   function api(path: string, init?: RequestInit): Promise<Response> {
     const adminTok = appAdminTokenForHeaders();
@@ -349,6 +374,8 @@ export function createNodeHttpBackend(
       customerEmail: string,
       customerPhone: string,
       claimedTotalPriceINR: bigint,
+      privatePartyBreakdown?: PrivatePartyBookingBreakdown,
+      catalogExtras?: CatalogBookingExtras,
     ): Promise<bigint> {
       const res = await api("/catalog/booking", {
         method: "POST",
@@ -363,11 +390,54 @@ export function createNodeHttpBackend(
           customerEmail,
           customerPhone,
           claimedTotalPriceINR,
+          ...(privatePartyBreakdown
+            ? {
+                adults: privatePartyBreakdown.adults,
+                childrenUnder6: privatePartyBreakdown.childrenUnder6,
+                children6To10: privatePartyBreakdown.children6To10,
+                children11Plus: privatePartyBreakdown.children11Plus,
+              }
+            : {}),
+          ...(catalogExtras?.villaMealIncluded !== undefined
+            ? { villaMealIncluded: catalogExtras.villaMealIncluded }
+            : {}),
         }),
       });
       if (!res.ok) await readError(res);
       const j = (await res.json()) as { bookingId: string };
       return BigInt(j.bookingId);
+    },
+    async createRazorpayOrderForBooking(
+      bookingId: bigint,
+    ): Promise<{
+      keyId: string;
+      orderId: string;
+      amount: number;
+      currency: string;
+    }> {
+      const res = await api("/payments/create-order", {
+        method: "POST",
+        body: jsonBodyDeep({ bookingId }),
+      });
+      if (!res.ok) await readError(res);
+      return (await res.json()) as {
+        keyId: string;
+        orderId: string;
+        amount: number;
+        currency: string;
+      };
+    },
+    async verifyRazorpayPayment(input: {
+      razorpay_order_id: string;
+      razorpay_payment_id: string;
+      razorpay_signature: string;
+    }): Promise<{ ok: boolean; bookingId: string }> {
+      const res = await api("/payments/verify", {
+        method: "POST",
+        body: JSON.stringify(input),
+      });
+      if (!res.ok) await readError(res);
+      return (await res.json()) as { ok: boolean; bookingId: string };
     },
     async listCatalog(): Promise<Array<CategoryView>> {
       const res = await api("/catalog/list");

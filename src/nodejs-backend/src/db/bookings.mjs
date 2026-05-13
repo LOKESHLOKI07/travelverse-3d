@@ -91,3 +91,13 @@ export async function dbUpdateBookingStatus(pool, id, status) {
   );
   return r.rowCount > 0;
 }
+
+/**
+ * @param {import('pg').Pool} pool
+ * @param {number} id
+ */
+export async function dbGetBookingById(pool, id) {
+  const r = await pool.query(`SELECT * FROM bookings WHERE booking_id = $1`, [id]);
+  if (!r.rowCount) return null;
+  return rowToBooking(r.rows[0]);
+}

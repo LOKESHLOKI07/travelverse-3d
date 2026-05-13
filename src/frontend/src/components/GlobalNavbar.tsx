@@ -24,11 +24,12 @@ import {
   Youtube,
 } from "lucide-react";
 import { useState } from "react";
-import type { Page } from "../types";
+import type { PackageSearchFilters, Page } from "../types";
+import { queueHomeSectionScroll } from "../utils/homeScrollQueue";
 
 interface Props {
   setPage: (page: Page) => void;
-  openPackagesCatalog: () => void;
+  openPackagesCatalog: (filters?: PackageSearchFilters) => void;
 }
 
 const NAV_TEAL = "#003d52";
@@ -44,8 +45,14 @@ const SOCIAL_LINKS = [
   { icon: Youtube, href: "#", label: "YouTube" },
 ];
 
+function goHomeToSection(setPage: (p: Page) => void, sectionId: string) {
+  queueHomeSectionScroll(sectionId);
+  setPage("home");
+}
+
 export default function GlobalNavbar({ setPage, openPackagesCatalog }: Props) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const closeMobile = () => setMobileNavOpen(false);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 shadow-sm">
@@ -113,41 +120,112 @@ export default function GlobalNavbar({ setPage, openPackagesCatalog }: Props) {
             />
           </button>
           <nav
-            className="hidden lg:flex flex-wrap items-center justify-center gap-x-5 gap-y-1 xl:gap-x-6 min-w-0"
+            className="hidden lg:flex flex-wrap items-center justify-center gap-x-4 gap-y-1 xl:gap-x-5 min-w-0"
             aria-label="Primary"
           >
-            <button type="button" className="text-sm font-semibold" style={{ color: NAV_TEAL }} onClick={() => setPage("home")}>
+            <button
+              type="button"
+              className="text-sm font-semibold hover:opacity-75 transition-opacity"
+              style={{ color: NAV_TEAL }}
+              onClick={() => setPage("home")}
+            >
               Home
-            </button>
-            <button type="button" className="text-sm font-semibold" style={{ color: NAV_TEAL }} onClick={openPackagesCatalog}>
-              Tours
-            </button>
-            <button type="button" className="text-sm font-semibold" style={{ color: NAV_TEAL }} onClick={openPackagesCatalog}>
-              Destination
-            </button>
-            <button type="button" className="text-sm font-semibold" style={{ color: NAV_TEAL }} onClick={openPackagesCatalog}>
-              Blog
-            </button>
-            <button type="button" className="text-sm font-semibold" style={{ color: NAV_TEAL }} onClick={() => setPage("home")}>
-              About
-            </button>
-            <button type="button" className="text-sm font-semibold" style={{ color: NAV_TEAL }} onClick={() => setPage("home")}>
-              Contact
             </button>
 
             <DropdownMenu>
               <DropdownMenuTrigger
-                className="flex items-center gap-0.5 text-sm font-semibold outline-none cursor-pointer"
+                className="flex items-center gap-0.5 text-sm font-semibold hover:opacity-75 outline-none cursor-pointer"
                 style={{ color: NAV_TEAL }}
               >
-                Our services
+                Treks &amp; Expeditions
+                <ChevronDown className="w-4 h-4 opacity-70" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" className="min-w-[12rem]">
+                <DropdownMenuItem onClick={() => setPage("treks-expeditions")}>
+                  Trek
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setPage("treks-expeditions")}>
+                  Expeditions
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="flex items-center gap-0.5 text-sm font-semibold hover:opacity-75 outline-none cursor-pointer"
+                style={{ color: NAV_TEAL }}
+              >
+                Packages
+                <ChevronDown className="w-4 h-4 opacity-70" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" className="min-w-[12rem]">
+                <DropdownMenuItem onClick={() => setPage("private-packages")}>
+                  Private packages
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    openPackagesCatalog({
+                      destination: "",
+                      date: "",
+                      guests: 1,
+                      catalogKinds: ["fixed", "trek"],
+                    })
+                  }
+                >
+                  Group packages
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="flex items-center gap-0.5 text-sm font-semibold hover:opacity-75 outline-none cursor-pointer"
+                style={{ color: NAV_TEAL }}
+              >
+                Hotels &amp; Villas
+                <ChevronDown className="w-4 h-4 opacity-70" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" className="min-w-[14rem]">
+                <DropdownMenuItem onClick={() => setPage("hotels")}>
+                  Hotels
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setPage("villas-farmhouses")}>
+                  Farmhouses &amp; Villas
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <button
+              type="button"
+              className="text-sm font-semibold hover:opacity-75"
+              style={{ color: NAV_TEAL }}
+              onClick={() => openPackagesCatalog()}
+            >
+              Destinations
+            </button>
+
+            <button
+              type="button"
+              className="text-sm font-semibold hover:opacity-75"
+              style={{ color: NAV_TEAL }}
+              onClick={() => goHomeToSection(setPage, "testimonials")}
+            >
+              Blog
+            </button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="flex items-center gap-0.5 text-sm font-semibold hover:opacity-75 outline-none cursor-pointer"
+                style={{ color: NAV_TEAL }}
+              >
+                Our Services
                 <ChevronDown className="w-4 h-4 opacity-70" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="center" className="min-w-[14rem]">
                 <DropdownMenuItem onClick={() => setPage("careers")}>
                   Careers
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={openPackagesCatalog}>
+                <DropdownMenuItem onClick={() => openPackagesCatalog()}>
                   Gallery
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setPage("partners")}>
@@ -158,13 +236,31 @@ export default function GlobalNavbar({ setPage, openPackagesCatalog }: Props) {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            <button
+              type="button"
+              className="text-sm font-semibold hover:opacity-75"
+              style={{ color: NAV_TEAL }}
+              onClick={() => goHomeToSection(setPage, "about")}
+            >
+              About
+            </button>
+
+            <button
+              type="button"
+              className="text-sm font-semibold hover:opacity-75"
+              style={{ color: NAV_TEAL }}
+              onClick={() => goHomeToSection(setPage, "contact")}
+            >
+              Contact
+            </button>
           </nav>
           <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 justify-end ml-auto lg:ml-0">
             <button
               type="button"
               className="hidden sm:inline-flex h-12 w-12 items-center justify-center rounded-full bg-muted border border-border hover:bg-muted/80 transition-colors"
               aria-label="Search packages"
-              onClick={openPackagesCatalog}
+              onClick={() => openPackagesCatalog()}
             >
               <Search className="h-5 w-5" style={{ color: NAV_TEAL }} />
             </button>
@@ -199,13 +295,184 @@ export default function GlobalNavbar({ setPage, openPackagesCatalog }: Props) {
               Site navigation and account actions
             </SheetDescription>
           </SheetHeader>
-          <nav className="flex flex-col px-4 py-2">
-            <button type="button" className="w-full rounded-md px-3 py-3 text-left" onClick={() => { setMobileNavOpen(false); setPage("home"); }}>Home</button>
-            <button type="button" className="w-full rounded-md px-3 py-3 text-left" onClick={() => { setMobileNavOpen(false); setPage("careers"); }}>Careers</button>
-            <button type="button" className="w-full rounded-md px-3 py-3 text-left" onClick={() => { setMobileNavOpen(false); setPage("partners"); }}>Our Partner</button>
-            <button type="button" className="w-full rounded-md px-3 py-3 text-left" onClick={() => { setMobileNavOpen(false); setPage("team"); }}>Our Team</button>
-            <button type="button" className="w-full rounded-md px-3 py-3 text-left" onClick={() => { setMobileNavOpen(false); openPackagesCatalog(); }}>Packages</button>
-            <button type="button" className="w-full rounded-md px-3 py-3 text-left" onClick={() => { setMobileNavOpen(false); setPage("account"); }}>Account</button>
+          <nav className="flex flex-col px-4 py-2 flex-1 overflow-y-auto">
+            <button
+              type="button"
+              className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80"
+              onClick={() => {
+                closeMobile();
+                setPage("home");
+              }}
+            >
+              Home
+            </button>
+            <p className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Treks &amp; Expeditions
+            </p>
+            <button
+              type="button"
+              className="w-full rounded-md pl-6 pr-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-muted/80"
+              onClick={() => {
+                closeMobile();
+                setPage("treks-expeditions");
+              }}
+            >
+              Trek
+            </button>
+            <button
+              type="button"
+              className="w-full rounded-md pl-6 pr-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-muted/80"
+              onClick={() => {
+                closeMobile();
+                setPage("treks-expeditions");
+              }}
+            >
+              Expeditions
+            </button>
+            <p className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Packages
+            </p>
+            <button
+              type="button"
+              className="w-full rounded-md pl-6 pr-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-muted/80"
+              onClick={() => {
+                closeMobile();
+                setPage("private-packages");
+              }}
+            >
+              Private packages
+            </button>
+            <button
+              type="button"
+              className="w-full rounded-md pl-6 pr-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-muted/80"
+              onClick={() => {
+                closeMobile();
+                openPackagesCatalog({
+                  destination: "",
+                  date: "",
+                  guests: 1,
+                  catalogKinds: ["fixed", "trek"],
+                });
+              }}
+            >
+              Group packages
+            </button>
+            <p className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Hotels &amp; Villas
+            </p>
+            <button
+              type="button"
+              className="w-full rounded-md pl-6 pr-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-muted/80"
+              onClick={() => {
+                closeMobile();
+                setPage("hotels");
+              }}
+            >
+              Hotels
+            </button>
+            <button
+              type="button"
+              className="w-full rounded-md pl-6 pr-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-muted/80"
+              onClick={() => {
+                closeMobile();
+                setPage("villas-farmhouses");
+              }}
+            >
+              Farmhouses &amp; Villas
+            </button>
+            <button
+              type="button"
+              className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80"
+              onClick={() => {
+                closeMobile();
+                openPackagesCatalog();
+              }}
+            >
+              Destinations
+            </button>
+            <button
+              type="button"
+              className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80"
+              onClick={() => {
+                closeMobile();
+                goHomeToSection(setPage, "testimonials");
+              }}
+            >
+              Blog
+            </button>
+            <p className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Our Services
+            </p>
+            <button
+              type="button"
+              className="w-full rounded-md pl-6 pr-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-muted/80"
+              onClick={() => {
+                closeMobile();
+                setPage("careers");
+              }}
+            >
+              Careers
+            </button>
+            <button
+              type="button"
+              className="w-full rounded-md pl-6 pr-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-muted/80"
+              onClick={() => {
+                closeMobile();
+                openPackagesCatalog();
+              }}
+            >
+              Gallery
+            </button>
+            <button
+              type="button"
+              className="w-full rounded-md pl-6 pr-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-muted/80"
+              onClick={() => {
+                closeMobile();
+                setPage("partners");
+              }}
+            >
+              Our Partner
+            </button>
+            <button
+              type="button"
+              className="w-full rounded-md pl-6 pr-3 py-2.5 text-left text-sm font-medium text-muted-foreground hover:bg-muted/80"
+              onClick={() => {
+                closeMobile();
+                setPage("team");
+              }}
+            >
+              Our Team
+            </button>
+            <button
+              type="button"
+              className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80"
+              onClick={() => {
+                closeMobile();
+                goHomeToSection(setPage, "about");
+              }}
+            >
+              About
+            </button>
+            <button
+              type="button"
+              className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80"
+              onClick={() => {
+                closeMobile();
+                goHomeToSection(setPage, "contact");
+              }}
+            >
+              Contact
+            </button>
+            <button
+              type="button"
+              className="w-full rounded-md px-3 py-3 text-left text-base font-medium text-muted-foreground hover:bg-muted/80"
+              onClick={() => {
+                closeMobile();
+                setPage("account");
+              }}
+            >
+              Account
+            </button>
           </nav>
         </SheetContent>
       </Sheet>
